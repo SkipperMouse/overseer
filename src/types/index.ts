@@ -3,6 +3,7 @@ export type Block = 'morning' | 'day' | 'evening'
 export interface TaskItem {
   id: string
   type: 'task'
+  task_id?: string | null
   title: string
   duration?: string
   icon?: string

@@ -12,8 +12,12 @@ function formatDate() {
   }).replace(/\.$/, '')
 }
 
-export default function TodayScreen() {
-  const { plan, loading, startEmpty, toggleItem, moveItem, saveNote } = useDayPlan()
+interface Props {
+  onNewDay: () => void
+}
+
+export default function TodayScreen({ onNewDay }: Props) {
+  const { plan, loading, taskDescIds, toggleItem, moveItem, saveNote } = useDayPlan()
   const noteRef = useRef<HTMLTextAreaElement>(null)
 
   if (loading) {
@@ -33,8 +37,8 @@ export default function TodayScreen() {
         <div className="no-plan-screen">
           <div className="no-plan-date">{formatDate()}</div>
           <div className="no-plan-message label-section">нет плана на сегодня</div>
-          <button className="pool-tag no-plan-btn" onClick={startEmpty}>
-            начать без шаблона
+          <button className="pool-tag no-plan-btn" onClick={onNewDay}>
+            создать план
           </button>
         </div>
       </div>
@@ -71,6 +75,7 @@ export default function TodayScreen() {
               item={item}
               canMoveUp={canMove(plan.items, item.id, 'up')}
               canMoveDown={canMove(plan.items, item.id, 'down')}
+              hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
               onToggle={() => toggleItem(item.id)}
               onMoveUp={() => moveItem(item.id, 'up')}
               onMoveDown={() => moveItem(item.id, 'down')}

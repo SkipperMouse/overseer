@@ -21,123 +21,97 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 **Overseer** is a PWA day planner built with React 19 + TypeScript + Vite, backed by Supabase (PostgreSQL).
 
-### Data model (`supabase/schema.sql`)
+### Supabase client
 
-- **tasks** — global reusable task definitions (title, duration, icon)
-- **templates** — named day presets
-- **template_items** — ordered tasks/separators within a template (block: morning/day/evening)
-- **day_plans** — denormalized daily schedule per date, stored as JSONB; each item is either a task (`{id, type, title, duration, icon, block, time, checked, position}`) or a separator (`{id, type, label, block}`); also has a `note` field
+`src/lib/supabase.ts` initializes the client with `schema: 'overseer'` — all table queries hit the `overseer` schema automatically. Schema definition is in `supabase/schema.sql`.
 
-### Frontend
+### Data model
 
-- `src/lib/supabase.ts` — initializes the Supabase client
-- `src/App.tsx` — root component (early-stage)
-- `src/index.css` — global design system: retro terminal aesthetic, JetBrains Mono, neon green accent `#00ff41`, dark background `#060d06`
+| Table | Purpose |
+|---|---|
+| `tasks` | Global reusable task definitions (title, duration, icon) |
+| `task_descriptions` | 1-to-1 extended content per task (lazy-created) |
+| `templates` | Named day presets |
+| `template_items` | Ordered tasks/separators in a template; columns: type, block, position, task_id (nullable), separator_label |
+| `day_plans` | Denormalized daily schedule per date; `items` is JSONB array |
 
-### Key dependencies
+`day_plans.items` JSONB shape — each element is either:
+- Task: `{id, type:'task', task_id?, title, duration?, icon?, block, time?, checked, position}`
+- Separator: `{id, type:'separator', label, block}`
 
-- `@dnd-kit` — drag-and-drop for task reordering
-- `@supabase/supabase-js` — database client
-- `vite-plugin-pwa` — service worker / offline support
+`task_id` in a day plan item is nullable — `null` means a one-off task created only for that day, not backed by `tasks` table.
+
+`block` values everywhere: `'morning' | 'day' | 'evening'`
+
+### Navigation model
+
+`App.tsx` holds a `Screen` union (`today | new-day | templates | pool | history`) and renders one top-level screen at a time. `BottomNav` is hidden on `new-day`. Three screens manage their own sub-navigation internally via local state:
+
+- **TodayScreen** — shows `NewDayScreen` flow via `onNewDay` prop when no plan exists
+- **TaskPoolScreen** — renders `TaskDescriptionScreen` in place when `descTask !== null`
+- **TemplatesScreen** — renders `TemplateEditScreen` in place when `editing !== null`
+
+### New Day flow
+
+`NewDayScreen` (3 steps):
+1. **pick-template** — list templates or "без шаблона"
+2. **build-plan** — three block sections prefilled from template; task pool below (pool tasks + one-off task form); block-picker overlay on task click
+3. **save** — denormalizes title/duration/icon/task_id into JSONB, inserts `day_plans` row, redirects to Today
+
+One-off tasks have `task_id: null` in the saved JSONB — they never touch the `tasks` table.
+
+### Hooks
+
+Each hook owns its slice of state and exposes optimistic-update mutations:
+
+- `useDayPlan` — today's plan + `taskDescIds: Set<string>` (task_ids with descriptions); `startEmpty`, `toggleItem`, `moveItem`, `saveNote`
+- `useTasks` — task pool; `createTask`, `updateTask`, `deleteTask`, `createDescription`, `updateDescription`
+- `useTemplates` — template list; `createTemplate`, `deleteTemplate`
+- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `moveItem`
+
+### Optimistic updates pattern
+
+Every mutation: update local state first → fire Supabase query → revert on error (or replace temp UUID with real one on insert).
+
+Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real row.
 
 ## Принципы разработки
 
 - Один экран / одна фича за раз — не забегать вперёд
 - TypeScript strict — никаких `any`, никаких `as unknown`
-- После каждого шага — краткое summary файлов и что изменилось
 - Оптимистичные апдейты: сначала обновляем локальный state, потом Supabase
 - Дата всегда локальная: `new Date().toLocaleDateString('en-CA')` → `YYYY-MM-DD`
 
 ## Дизайн-система — ОБЯЗАТЕЛЬНО
 
-Все визуальные решения строго из `overseer-spec.md`. Не отклоняться без явного запроса.
+Все визуальные решения строго соответствуют стилям в `src/index.css`. Не отклоняться без явного запроса.
 
-Ключевые константы:
-- Фон: `#060d06`, поверхности: `#040b04`
-- Акцент: `#00ff41`, свечение: `0 0 6px #00ff4188`
+Ключевые константы (`src/index.css` CSS-переменные):
+- Фон: `#060d06` (`--bg-base`), поверхности: `#040b04` (`--bg-surface`)
+- Акцент: `#00ff41` (`--accent`), свечение: `0 0 6px #00ff4188` (`--accent-glow`)
 - Шрифт: JetBrains Mono везде
 - Скругления: 0px (максимум 2px для чекбоксов)
 - Бордеры: 1px solid (не 0.5px)
 - Заголовки секций всегда в формате `[ утро ]`, `[ работа ]`, `[ вечер ]`
 - Scanlines через `::before` на `.app-root`
+- Все стили — в `src/index.css`. Нет CSS-модулей, нет Tailwind.
 
-## Структура компонентов (целевая)
+Emoji иконки задач всегда рендерятся с классом `pip-emoji` (Pip-Boy фильтр: `filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4)`). Применяется везде где отображается иконка задачи — в плане, пуле, шаблонах, пикере. Не применять к навигации и системным элементам.
 
-```
-src/
-  components/
-    today/        — Today экран
-    templates/    — Templates экран  
-    tasks/        — Task Pool экран
-    history/      — History экран
-    ui/           — общие: Checkbox, TaskRow, SectionHeader, BottomNav
-  lib/
-    supabase.ts
-  types/
-    index.ts      — все TypeScript типы
-  hooks/
-    useDayPlan.ts
-    useTasks.ts
-    useTemplates.ts
-```
+Существующие CSS-классы для повторного использования: `.pool-add-btn`, `.pool-del-btn`, `.pool-del-confirm`, `.pool-input`, `.pool-save-btn`, `.move-btn`, `.task-move-btns`, `.task-icon`, `.task-duration`, `.desc-back`, `.label-section`, `.text-muted`, `.prompt-line`, `.blink-cursor`, `.section-header`, `.pip-emoji`, `.task-desc-indicator`.
 
-## TypeScript типы (добавить в src/types/index.ts)
+## TypeScript типы
+
+Все типы в `src/types/index.ts`. Ключевые:
 
 ```typescript
-export type Block = 'morning' | 'day' | 'evening';
+export type Block = 'morning' | 'day' | 'evening'
 
-export interface TaskItem {
-  id: string;
-  type: 'task';
-  title: string;
-  duration?: string;
-  icon?: string;
-  block: Block;
-  time?: string | null;
-  checked: boolean;
-  position: number;
-}
-
-export interface SeparatorItem {
-  id: string;
-  type: 'separator';
-  label: string;
-  block: Block;
-}
-
-export type DayItem = TaskItem | SeparatorItem;
-
-export interface DayPlan {
-  id: string;
-  date: string;
-  items: DayItem[];
-  note?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Task {
-  id: string;
-  title: string;
-  duration?: string;
-  icon?: string;
-  created_at: string;
-}
-
-export interface Template {
-  id: string;
-  name: string;
-  created_at: string;
-}
-
-export interface TemplateItem {
-  id: string;
-  template_id: string;
-  task_id?: string;
-  type: 'task' | 'separator';
-  separator_label?: string;
-  block: Block;
-  position: number;
-  task?: Task;
-}
+export interface Task { id, title, duration?, icon?, created_at, description? }
+export interface TaskItem { id, type:'task', task_id?: string | null, title, duration?, icon?, block, time?, checked, position }
+export interface SeparatorItem { id, type:'separator', label, block }
+export type DayItem = TaskItem | SeparatorItem
+export interface DayPlan { id, date, items: DayItem[], note?, created_at, updated_at }
+export interface Template { id, name, created_at }
+export interface TemplateItem { id, template_id, task_id?, type, separator_label?, block, position, task? }
 ```

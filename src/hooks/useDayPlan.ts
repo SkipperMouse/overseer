@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { DayPlan, DayItem, TaskItem } from '../types'
 
+interface RawDescRow {
+  task_id: string
+}
+
 function todayDate() {
   return new Date().toLocaleDateString('en-CA')
 }
@@ -25,18 +29,34 @@ export function canMove(items: DayItem[], id: string, direction: 'up' | 'down'):
 export function useDayPlan() {
   const [plan, setPlan] = useState<DayPlan | null>(null)
   const [loading, setLoading] = useState(true)
+  const [taskDescIds, setTaskDescIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    supabase
-      .from('day_plans')
-      .select('*')
-      .eq('date', todayDate())
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        setPlan((data as DayPlan) ?? null)
-        setLoading(false)
-      })
+    async function load() {
+      const { data, error } = await supabase
+        .from('day_plans')
+        .select('*')
+        .eq('date', todayDate())
+        .maybeSingle()
+      if (error) console.error(error)
+      const planData = (data as DayPlan) ?? null
+      setPlan(planData)
+
+      if (planData) {
+        const taskIds = planData.items
+          .filter((i): i is TaskItem => i.type === 'task' && !!i.task_id)
+          .map(i => i.task_id as string)
+        if (taskIds.length > 0) {
+          const { data: descs } = await supabase
+            .from('task_descriptions')
+            .select('task_id')
+            .in('task_id', taskIds)
+          setTaskDescIds(new Set(((descs ?? []) as RawDescRow[]).map(d => d.task_id)))
+        }
+      }
+      setLoading(false)
+    }
+    load()
   }, [])
 
   const startEmpty = useCallback(async () => {
@@ -97,5 +117,5 @@ export function useDayPlan() {
     })
   }, [])
 
-  return { plan, loading, startEmpty, toggleItem, moveItem, saveNote }
+  return { plan, loading, taskDescIds, startEmpty, toggleItem, moveItem, saveNote }
 }

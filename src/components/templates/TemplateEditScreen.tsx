@@ -60,7 +60,7 @@ function TaskPicker({ tasks, onSelect, onClose }: TaskPickerProps) {
               className="tmpl-picker-item"
               onClick={() => { onSelect(task.id); onClose() }}
             >
-              {task.icon && <span className="task-icon">{task.icon}</span>}
+              {task.icon && <span className="task-icon pip-emoji">{task.icon}</span>}
               <span className="tmpl-picker-title">{task.title}</span>
               {task.duration && (
                 <span className="task-duration">{task.duration}</span>
@@ -147,7 +147,7 @@ function BlockSection({
             ) : (
               <>
                 {item.task?.icon && (
-                  <span className="task-icon">{item.task.icon}</span>
+                  <span className="task-icon pip-emoji">{item.task.icon}</span>
                 )}
                 <span className="tmpl-item-title">{item.task?.title ?? '?'}</span>
                 {item.task?.duration && (

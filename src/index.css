@@ -967,6 +967,19 @@ body {
   font-size: 11px;
 }
 
+/* ─── Pip-Boy emoji filter ──────────────────────────────────────── */
+.pip-emoji {
+  filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4);
+  display: inline-block;
+}
+
+/* ─── Description indicator (Today screen) ──────────────────────── */
+.task-desc-indicator {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 /* ─── Description screen ───────────────────────────────────────── */
 .desc-screen {
   flex: 1;
@@ -1047,4 +1060,304 @@ body {
 
 .desc-textarea:focus {
   border-color: var(--border-bright);
+}
+
+/* ─── New Day screen ─────────────────────────────────────────── */
+.new-day-screen {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nd-loading,
+.nd-exists {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 16px;
+}
+
+.nd-goto-btn {
+  padding: 6px 16px;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+.nd-header {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nd-header-title {
+  flex: 1;
+}
+
+/* Step 1 — template picker */
+.nd-template-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 4px;
+}
+
+.nd-pick-prompt {
+  padding: 12px 16px 8px;
+}
+
+.nd-tmpl-item {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nd-tmpl-item:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+  text-shadow: var(--accent-glow-sm);
+}
+
+.nd-tmpl-no-tmpl {
+  color: var(--text-muted);
+}
+
+.nd-tmpl-no-tmpl:hover {
+  color: var(--accent);
+}
+
+.nd-tmpl-name {
+  flex-shrink: 0;
+}
+
+.nd-tmpl-none {
+  padding: 16px 16px;
+}
+
+/* Step 2 — plan builder */
+.nd-build-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.nd-block {
+  border-bottom: 1px solid var(--border-dim);
+  padding-bottom: 4px;
+}
+
+.nd-block-empty {
+  padding: 6px 16px 8px;
+}
+
+/* Task pool */
+.nd-pool-section {
+  padding-top: 4px;
+}
+
+.nd-pool-label {
+  padding: 12px 16px 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.nd-pool-empty {
+  padding: 8px 16px;
+}
+
+.nd-pool-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nd-pool-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.nd-pool-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nd-pool-plus {
+  font-size: 14px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.nd-pool-item:hover .nd-pool-plus {
+  color: var(--accent);
+  text-shadow: var(--accent-glow-sm);
+}
+
+/* Save button */
+.nd-save-area {
+  padding: 20px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.nd-start-btn {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 8px 24px;
+  cursor: pointer;
+  text-shadow: var(--accent-glow-sm);
+  border-radius: 0;
+}
+
+.nd-start-btn:hover:not(:disabled) {
+  background: rgba(0, 255, 65, 0.06);
+  box-shadow: var(--accent-glow);
+}
+
+.nd-start-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Block picker overlay */
+.nd-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-end;
+  justify-content: stretch;
+}
+
+.nd-picker {
+  width: 100%;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-bright);
+  padding: 12px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nd-picker-label {
+  margin-bottom: 4px;
+}
+
+.nd-picker-task-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--border-dim);
+  margin-bottom: 4px;
+}
+
+.nd-picker-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 2px;
+  padding: 10px 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nd-picker-btn:hover {
+  color: var(--accent);
+  text-shadow: var(--accent-glow-sm);
+}
+
+.nd-picker-cancel {
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 10px 0 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-dim);
+}
+
+.nd-picker-cancel:hover {
+  color: var(--text-muted);
+}
+
+/* One-off task badge */
+.nd-onetime-badge {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  border: 1px solid var(--border-dim);
+  padding: 1px 4px;
+  flex-shrink: 0;
+}
+
+/* One-off add button */
+.nd-onetime-btn {
+  display: block;
+  width: 100%;
+  padding: 9px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nd-onetime-btn:hover {
+  color: var(--text-muted);
+}
+
+/* One-off inline form */
+.nd-onetime-form {
+  border-bottom: 1px solid var(--border-dim);
+  background: var(--bg-surface);
+  padding: 8px 16px;
+}
+
+.nd-onetime-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

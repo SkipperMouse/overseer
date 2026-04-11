@@ -117,7 +117,7 @@ export default function TaskPoolScreen() {
               onClick={() => setPickerFor(pickerFor === 'new' ? null : 'new')}
               title="выбрать иконку"
             >
-              {newIcon ? newIcon : <span className="text-dim">∅</span>}
+              {newIcon ? <span className="pip-emoji">{newIcon}</span> : <span className="text-dim">∅</span>}
             </button>
             <input
               className="pool-input pool-input-title"
@@ -154,7 +154,7 @@ export default function TaskPoolScreen() {
               onClick={() => setPickerFor(pickerFor === task.id ? null : task.id)}
               title="изменить иконку"
             >
-              {task.icon || <span className="text-dim">∅</span>}
+              {task.icon ? <span className="pip-emoji">{task.icon}</span> : <span className="text-dim">∅</span>}
             </button>
 
             {/* Title — inline edit */}
