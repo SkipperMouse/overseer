@@ -8,18 +8,6 @@ interface RawTaskRow {
   duration: string | null
   icon: string | null
   created_at: string
-  task_descriptions: TaskDescription[] | null
-}
-
-function toTask(raw: RawTaskRow): Task {
-  return {
-    id: raw.id,
-    title: raw.title,
-    duration: raw.duration ?? undefined,
-    icon: raw.icon ?? undefined,
-    created_at: raw.created_at,
-    description: raw.task_descriptions?.[0] ?? undefined,
-  }
 }
 
 export function useTasks() {
@@ -27,15 +15,28 @@ export function useTasks() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase
-      .from('tasks')
-      .select('*, task_descriptions(*)')
-      .order('created_at', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) console.error(error)
-        setTasks((data as RawTaskRow[] ?? []).map(toTask))
-        setLoading(false)
-      })
+    Promise.all([
+      supabase.from('tasks').select('*').order('created_at', { ascending: true }),
+      supabase.from('task_descriptions').select('*'),
+    ]).then(([tasksRes, descsRes]) => {
+      if (tasksRes.error) console.error(tasksRes.error)
+      if (descsRes.error) console.error(descsRes.error)
+
+      const descMap = new Map(
+        ((descsRes.data ?? []) as TaskDescription[]).map(d => [d.task_id, d])
+      )
+      setTasks(
+        ((tasksRes.data ?? []) as RawTaskRow[]).map(raw => ({
+          id: raw.id,
+          title: raw.title,
+          duration: raw.duration ?? undefined,
+          icon: raw.icon ?? undefined,
+          created_at: raw.created_at,
+          description: descMap.get(raw.id),
+        }))
+      )
+      setLoading(false)
+    })
   }, [])
 
   const createTask = useCallback(async (
@@ -50,7 +51,7 @@ export function useTasks() {
     const { data, error } = await supabase
       .from('tasks')
       .insert({ title, duration: duration ?? null, icon: icon ?? null })
-      .select('*, task_descriptions(*)')
+      .select()
       .single()
 
     if (error) {
@@ -58,7 +59,14 @@ export function useTasks() {
       setTasks(prev => prev.filter(t => t.id !== tempId))
       return
     }
-    setTasks(prev => prev.map(t => t.id === tempId ? toTask(data as RawTaskRow) : t))
+    const raw = data as RawTaskRow
+    setTasks(prev => prev.map(t => t.id === tempId ? {
+      id: raw.id,
+      title: raw.title,
+      duration: raw.duration ?? undefined,
+      icon: raw.icon ?? undefined,
+      created_at: raw.created_at,
+    } : t))
   }, [])
 
   const updateTask = useCallback(async (
@@ -89,7 +97,19 @@ export function useTasks() {
       .insert({ task_id: taskId, content: '' })
       .select()
       .single()
-    if (error) { console.error(error); return null }
+
+    if (error) {
+      const { data: existing, error: fetchError } = await supabase
+        .from('task_descriptions')
+        .select()
+        .eq('task_id', taskId)
+        .single()
+      if (fetchError || !existing) { console.error(error); return null }
+      const desc = existing as TaskDescription
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, description: desc } : t))
+      return desc
+    }
+
     const desc = data as TaskDescription
     setTasks(prev => prev.map(t =>
       t.id === taskId ? { ...t, description: desc } : t

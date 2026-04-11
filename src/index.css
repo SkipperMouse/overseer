@@ -747,6 +747,226 @@ body {
   background: var(--bg-hover);
 }
 
+/* ─── Templates screen ─────────────────────────────────────────── */
+.tmpl-screen {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tmpl-header {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tmpl-brand {
+  letter-spacing: 3px;
+}
+
+.tmpl-edit-title {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+  padding-left: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tmpl-new-form {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  background: var(--bg-surface);
+}
+
+.tmpl-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tmpl-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  gap: 8px;
+}
+
+.tmpl-item:hover {
+  background: var(--bg-hover);
+}
+
+.tmpl-item-name {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tmpl-item-name:hover {
+  color: var(--accent);
+  text-shadow: var(--accent-glow-sm);
+}
+
+/* ─── Template edit ─────────────────────────────────────────────── */
+.tmpl-edit-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.tmpl-block {
+  border-bottom: 1px solid var(--border-dim);
+  padding-bottom: 8px;
+}
+
+.tmpl-block-items {
+  padding: 0 16px;
+}
+
+.tmpl-item-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.tmpl-item-title {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tmpl-item-sep-label {
+  flex: 1;
+  font-size: 11px;
+  font-style: italic;
+}
+
+.tmpl-block-actions {
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px;
+}
+
+.tmpl-sep-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-dim);
+}
+
+/* ─── Task picker overlay ───────────────────────────────────────── */
+.tmpl-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: flex-end;
+  justify-content: stretch;
+}
+
+.tmpl-picker {
+  width: 100%;
+  max-height: 60vh;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-bright);
+  display: flex;
+  flex-direction: column;
+}
+
+.tmpl-picker-search {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.tmpl-picker-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-mid);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 3px 2px;
+  outline: none;
+}
+
+.tmpl-picker-input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.tmpl-picker-input::placeholder {
+  color: var(--text-dim);
+}
+
+.tmpl-picker-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tmpl-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-dim);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tmpl-picker-item:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+  text-shadow: var(--accent-glow-sm);
+}
+
+.tmpl-picker-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tmpl-picker-empty {
+  padding: 16px;
+  font-size: 11px;
+}
+
 /* ─── Description screen ───────────────────────────────────────── */
 .desc-screen {
   flex: 1;

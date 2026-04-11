@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import TodayScreen from './components/today/TodayScreen'
 import TaskPoolScreen from './components/tasks/TaskPoolScreen'
+import TemplatesScreen from './components/templates/TemplatesScreen'
 import BottomNav from './components/ui/BottomNav'
 import './index.css'
 
@@ -13,7 +14,8 @@ function App() {
     <div className="app-root">
       {screen === 'today' && <TodayScreen />}
       {screen === 'pool' && <TaskPoolScreen />}
-      {(screen === 'templates' || screen === 'history') && (
+      {screen === 'templates' && <TemplatesScreen />}
+      {screen === 'history' && (
         <div className="stub-screen">
           <span className="text-muted">// в разработке</span>
           <span className="blink-cursor" />
