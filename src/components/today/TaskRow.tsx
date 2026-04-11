@@ -5,23 +5,29 @@ interface Props {
   canMoveUp: boolean
   canMoveDown: boolean
   hasDesc?: boolean
+  readonly?: boolean
   onToggle: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onDelete?: () => void
 }
 
-export default function TaskRow({ item, canMoveUp, canMoveDown, hasDesc, onToggle, onMoveUp, onMoveDown }: Props) {
+export default function TaskRow({
+  item, canMoveUp, canMoveDown, hasDesc,
+  readonly, onToggle, onMoveUp, onMoveDown, onDelete,
+}: Props) {
   return (
     <div
       className={`task-row${item.checked ? ' done' : ''}`}
-      onClick={onToggle}
+      onClick={readonly ? undefined : onToggle}
     >
       <input
         type="checkbox"
         className="checkbox"
         checked={item.checked}
-        onChange={onToggle}
+        onChange={readonly ? undefined : onToggle}
         onClick={e => e.stopPropagation()}
+        readOnly={readonly}
       />
 
       {item.icon && (
@@ -38,20 +44,30 @@ export default function TaskRow({ item, canMoveUp, canMoveDown, hasDesc, onToggl
         <span className="task-desc-indicator">¶</span>
       )}
 
-      <div className="task-move-btns" onClick={e => e.stopPropagation()}>
+      {!readonly && (
+        <div className="task-move-btns" onClick={e => e.stopPropagation()}>
+          <button
+            className="move-btn"
+            disabled={!canMoveUp}
+            onClick={onMoveUp}
+            aria-label="переместить вверх"
+          >↑</button>
+          <button
+            className="move-btn"
+            disabled={!canMoveDown}
+            onClick={onMoveDown}
+            aria-label="переместить вниз"
+          >↓</button>
+        </div>
+      )}
+
+      {onDelete && (
         <button
-          className="move-btn"
-          disabled={!canMoveUp}
-          onClick={onMoveUp}
-          aria-label="переместить вверх"
-        >↑</button>
-        <button
-          className="move-btn"
-          disabled={!canMoveDown}
-          onClick={onMoveDown}
-          aria-label="переместить вниз"
-        >↓</button>
-      </div>
+          className="pool-del-btn"
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          aria-label="удалить задачу"
+        >×</button>
+      )}
     </div>
   )
 }

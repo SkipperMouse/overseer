@@ -3,6 +3,7 @@ import TodayScreen from './components/today/TodayScreen'
 import NewDayScreen from './components/today/NewDayScreen'
 import TaskPoolScreen from './components/tasks/TaskPoolScreen'
 import TemplatesScreen from './components/templates/TemplatesScreen'
+import HistoryScreen from './components/history/HistoryScreen'
 import BottomNav from './components/ui/BottomNav'
 import './index.css'
 
@@ -17,12 +18,7 @@ function App() {
       {screen === 'new-day' && <NewDayScreen onDone={() => setScreen('today')} />}
       {screen === 'pool' && <TaskPoolScreen />}
       {screen === 'templates' && <TemplatesScreen />}
-      {screen === 'history' && (
-        <div className="stub-screen">
-          <span className="text-muted">// в разработке</span>
-          <span className="blink-cursor" />
-        </div>
-      )}
+      {screen === 'history' && <HistoryScreen />}
       {screen !== 'new-day' && <BottomNav active={screen} onNavigate={setScreen} />}
     </div>
   )

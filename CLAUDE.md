@@ -45,11 +45,24 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 ### Navigation model
 
-`App.tsx` holds a `Screen` union (`today | new-day | templates | pool | history`) and renders one top-level screen at a time. `BottomNav` is hidden on `new-day`. Three screens manage their own sub-navigation internally via local state:
+`App.tsx` holds a `Screen` union (`today | new-day | templates | pool | history`) and renders one top-level screen at a time. `BottomNav` uses a narrower union that excludes `new-day` (it's hidden on that screen). Three screens manage their own sub-navigation internally via local state:
 
-- **TodayScreen** — shows `NewDayScreen` flow via `onNewDay` prop when no plan exists
+- **TodayScreen** — thin wrapper: renders `<DayView date={today} onNewDay={...} />`; shows `NewDayScreen` flow via `onNewDay` prop when no plan exists
 - **TaskPoolScreen** — renders `TaskDescriptionScreen` in place when `descTask !== null`
 - **TemplatesScreen** — renders `TemplateEditScreen` in place when `editing !== null`
+- **HistoryScreen** — renders `DayView` in place when `viewingDate !== null`
+
+**Adding a new top-level screen** requires four changes: new hook + component under `src/components/<name>/`, CSS section in `src/index.css`, import + render in `App.tsx`, and adding the id to `NAV_ITEMS` in `BottomNav.tsx` (also update the `Screen` type there).
+
+### DayView component
+
+`src/components/dayview/DayView.tsx` is the universal day display/edit component used by both TodayScreen and HistoryScreen.
+
+Props: `{ date: string, onNewDay?: () => void, onBack?: () => void }`
+
+Two modes:
+- **View mode** — for today: tasks are interactive (toggle checked, move ↑↓), note is editable on blur. For historical days: everything readonly, no interactive elements. Header has `[ edit ]` button.
+- **Edit mode** (same for all days) — add task from pool, add one-off task (both via block-picker overlay), delete tasks, move ↑↓, toggle checked, edit note. Header has `[ done ]` button that persists and returns to view.
 
 ### New Day flow
 
@@ -64,10 +77,12 @@ One-off tasks have `task_id: null` in the saved JSONB — they never touch the `
 
 Each hook owns its slice of state and exposes optimistic-update mutations:
 
-- `useDayPlan` — today's plan + `taskDescIds: Set<string>` (task_ids with descriptions); `startEmpty`, `toggleItem`, `moveItem`, `saveNote`
+- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `moveItem`, `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Also exports `canMove` helper. Reset loading/plan on date change.
+- `useDayPlan` — thin wrapper: `useDayPlanByDate(todayDate())`; re-exports `canMove`
 - `useTasks` — task pool; `createTask`, `updateTask`, `deleteTask`, `createDescription`, `updateDescription`
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
 - `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `moveItem`
+- `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
 
 ### Optimistic updates pattern
 
@@ -98,7 +113,7 @@ Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real
 
 Emoji иконки задач всегда рендерятся с классом `pip-emoji` (Pip-Boy фильтр: `filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4)`). Применяется везде где отображается иконка задачи — в плане, пуле, шаблонах, пикере. Не применять к навигации и системным элементам.
 
-Существующие CSS-классы для повторного использования: `.pool-add-btn`, `.pool-del-btn`, `.pool-del-confirm`, `.pool-input`, `.pool-save-btn`, `.move-btn`, `.task-move-btns`, `.task-icon`, `.task-duration`, `.desc-back`, `.label-section`, `.text-muted`, `.prompt-line`, `.blink-cursor`, `.section-header`, `.pip-emoji`, `.task-desc-indicator`.
+Существующие CSS-классы для повторного использования: `.pool-add-btn`, `.pool-del-btn`, `.pool-del-confirm`, `.pool-input`, `.pool-save-btn`, `.move-btn`, `.task-move-btns`, `.task-icon`, `.task-duration`, `.desc-back`, `.label-section`, `.text-muted`, `.prompt-line`, `.blink-cursor`, `.section-header`, `.pip-emoji`, `.task-desc-indicator`, `.progress-track`, `.progress-fill`, `.history-item`, `.nd-picker-overlay`, `.nd-picker`, `.nd-pool-item`, `.day-view-action-btn`.
 
 ## TypeScript типы
 
