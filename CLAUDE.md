@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git Workflow
+
+At the start of each session, unless a specific branch is already specified, create a new branch from the current local `main`.
+
+### Branch naming
+- New feature or general task: `feat/YYYYMMDD-<slug>`
+- Bug fix: `fix/YYYYMMDD-<slug>`
+
+`<slug>` — 2-4 words in kebab-case, derived from the task description. English only.
+
+Examples: `feat/20260412-user-auth-flow`, `fix/20260412-null-pointer-login`
+
+### Procedure
+```bash
+git checkout main
+git checkout -b <branch-name>
+```
+
+If the branch name already exists, generate a different slug — do not add numeric suffixes like `-2`.
+
+### Constraints
+- No `git fetch`, no `git pull` — repository state is managed manually
+- No commits, no pushes — only branch creation and file changes
+- If no branch has been created yet in the session and a task begins, create the branch before making any changes
+
 ## Commands
 
 ```bash

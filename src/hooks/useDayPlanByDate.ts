@@ -6,14 +6,24 @@ interface RawDescRow {
   task_id: string
 }
 
+const BLOCKS: Block[] = ['morning', 'day', 'evening']
+function nextBlock(b: Block): Block | null {
+  const i = BLOCKS.indexOf(b); return i < BLOCKS.length - 1 ? BLOCKS[i + 1] : null
+}
+function prevBlock(b: Block): Block | null {
+  const i = BLOCKS.indexOf(b); return i > 0 ? BLOCKS[i - 1] : null
+}
+
 export function canMove(items: DayItem[], id: string, direction: 'up' | 'down'): boolean {
   const idx = items.findIndex(i => i.id === id)
   if (idx === -1) return false
   const block = items[idx].block
   if (direction === 'up') {
-    return items.slice(0, idx).some(i => i.block === block && i.type === 'task')
+    const hasPrev = items.slice(0, idx).some(i => i.type === 'task' && i.block === block)
+    return hasPrev || prevBlock(block) !== null
   }
-  return items.slice(idx + 1).some(i => i.block === block && i.type === 'task')
+  const hasNext = items.slice(idx + 1).some(i => i.type === 'task' && i.block === block)
+  return hasNext || nextBlock(block) !== null
 }
 
 export function useDayPlanByDate(date: string) {
@@ -78,14 +88,47 @@ export function useDayPlanByDate(date: string) {
       const items = [...prev.items]
       const idx = items.findIndex(i => i.id === id)
       if (idx === -1) return prev
-      const block = items[idx].block
+      const item = items[idx]
+      if (item.type !== 'task') return prev
+      const block = item.block
 
-      const swapIdx = direction === 'up'
-        ? [...items.keys()].filter(i => i < idx && items[i].block === block && items[i].type === 'task').at(-1)
-        : items.findIndex((item, i) => i > idx && item.block === block && item.type === 'task')
+      if (direction === 'up') {
+        const prevInBlock = [...items.keys()]
+          .filter(i => i < idx && items[i].type === 'task' && items[i].block === block)
+          .at(-1)
 
-      if (swapIdx === undefined || swapIdx === -1) return prev
-      ;[items[idx], items[swapIdx]] = [items[swapIdx], items[idx]]
+        if (prevInBlock !== undefined) {
+          // Свап внутри блока
+          ;[items[idx], items[prevInBlock]] = [items[prevInBlock], items[idx]]
+        } else {
+          // Перенос в конец предыдущего блока (перед разделителем текущего блока)
+          const pb = prevBlock(block)
+          if (!pb) return prev
+          const curSepIdx = items.findIndex(i => i.type === 'separator' && i.block === block)
+          if (curSepIdx === -1) return prev
+          items.splice(idx, 1)
+          const insertAt = idx < curSepIdx ? curSepIdx - 1 : curSepIdx
+          items.splice(insertAt, 0, { ...item, block: pb })
+        }
+      } else {
+        const nextInBlock = items.findIndex(
+          (it, i) => i > idx && it.type === 'task' && it.block === block
+        )
+
+        if (nextInBlock !== -1) {
+          // Свап внутри блока
+          ;[items[idx], items[nextInBlock]] = [items[nextInBlock], items[idx]]
+        } else {
+          // Перенос в начало следующего блока (сразу после его разделителя)
+          const nb = nextBlock(block)
+          if (!nb) return prev
+          const nextSepIdx = items.findIndex(i => i.type === 'separator' && i.block === nb)
+          if (nextSepIdx === -1) return prev
+          items.splice(idx, 1)
+          const adjustedSep = idx < nextSepIdx ? nextSepIdx - 1 : nextSepIdx
+          items.splice(adjustedSep + 1, 0, { ...item, block: nb })
+        }
+      }
 
       const next = { ...prev, items }
       persistItems(prev.id, items)
