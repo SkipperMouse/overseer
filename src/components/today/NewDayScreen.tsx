@@ -159,28 +159,34 @@ export default function NewDayScreen({ onDone }: Props) {
 
   function addToBlock(block: Block) {
     if (!pendingForBlock) return
-    if (pendingForBlock.kind === 'pool') {
-      const { task } = pendingForBlock
-      setDraftItems(prev => [...prev, {
-        id: crypto.randomUUID(),
-        type: 'task',
-        taskId: task.id,
-        title: task.title,
-        duration: task.duration,
-        icon: task.icon,
-        block,
-      }])
-    } else {
-      setDraftItems(prev => [...prev, {
-        id: crypto.randomUUID(),
-        type: 'task',
-        taskId: null,
-        title: pendingForBlock.title,
-        duration: pendingForBlock.duration,
-        icon: pendingForBlock.icon,
-        block,
-      }])
-    }
+    const newItem: DraftTaskItem = pendingForBlock.kind === 'pool'
+      ? {
+          id: crypto.randomUUID(),
+          type: 'task',
+          taskId: pendingForBlock.task.id,
+          title: pendingForBlock.task.title,
+          duration: pendingForBlock.task.duration,
+          icon: pendingForBlock.task.icon,
+          block,
+        }
+      : {
+          id: crypto.randomUUID(),
+          type: 'task',
+          taskId: null,
+          title: pendingForBlock.title,
+          duration: pendingForBlock.duration,
+          icon: pendingForBlock.icon,
+          block,
+        }
+    setDraftItems(prev => {
+      let insertIdx = prev.length
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].block === block) { insertIdx = i + 1; break }
+      }
+      const items = [...prev]
+      items.splice(insertIdx, 0, newItem)
+      return items
+    })
     setPendingForBlock(null)
   }
 
