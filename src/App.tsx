@@ -14,12 +14,14 @@ function App() {
 
   return (
     <div className="app-root">
-      {screen === 'today' && <TodayScreen onNewDay={() => setScreen('new-day')} />}
-      {screen === 'new-day' && <NewDayScreen onDone={() => setScreen('today')} />}
-      {screen === 'pool' && <TaskPoolScreen />}
-      {screen === 'templates' && <TemplatesScreen />}
-      {screen === 'history' && <HistoryScreen />}
-      {screen !== 'new-day' && <BottomNav active={screen} onNavigate={setScreen} />}
+      <div className="app-container">
+        {screen === 'today' && <TodayScreen onNewDay={() => setScreen('new-day')} />}
+        {screen === 'new-day' && <NewDayScreen onDone={() => setScreen('today')} />}
+        {screen === 'pool' && <TaskPoolScreen />}
+        {screen === 'templates' && <TemplatesScreen />}
+        {screen === 'history' && <HistoryScreen />}
+        {screen !== 'new-day' && <BottomNav active={screen} onNavigate={setScreen} />}
+      </div>
     </div>
   )
 }
