@@ -101,25 +101,14 @@ export function useDayPlanByDate(date: string) {
           // Свап внутри блока
           ;[items[idx], items[prevInBlock]] = [items[prevInBlock], items[idx]]
         } else {
+          // Перенос в конец предыдущего блока (перед разделителем текущего блока)
           const pb = prevBlock(block)
           if (!pb) return prev
-          const lastInPrev = [...items.keys()]
-            .filter(i => items[i].type === 'task' && items[i].block === pb)
-            .at(-1)
-
-          if (lastInPrev !== undefined) {
-            // Свап с последней задачей предыдущего блока
-            ;[items[idx], items[lastInPrev]] = [items[lastInPrev], items[idx]]
-            const a = items[idx]; if (a.type === 'task') items[idx] = { ...a, block }
-            const b = items[lastInPrev]; if (b.type === 'task') items[lastInPrev] = { ...b, block: pb }
-          } else {
-            // Предыдущий блок пуст — переносим перед разделителем текущего блока
-            const curSepIdx = items.findIndex(i => i.type === 'separator' && i.block === block)
-            if (curSepIdx === -1) return prev
-            items.splice(idx, 1)
-            const insertAt = idx < curSepIdx ? curSepIdx - 1 : curSepIdx
-            items.splice(insertAt, 0, { ...item, block: pb })
-          }
+          const curSepIdx = items.findIndex(i => i.type === 'separator' && i.block === block)
+          if (curSepIdx === -1) return prev
+          items.splice(idx, 1)
+          const insertAt = idx < curSepIdx ? curSepIdx - 1 : curSepIdx
+          items.splice(insertAt, 0, { ...item, block: pb })
         }
       } else {
         const nextInBlock = items.findIndex(
@@ -130,23 +119,14 @@ export function useDayPlanByDate(date: string) {
           // Свап внутри блока
           ;[items[idx], items[nextInBlock]] = [items[nextInBlock], items[idx]]
         } else {
+          // Перенос в начало следующего блока (сразу после его разделителя)
           const nb = nextBlock(block)
           if (!nb) return prev
-          const firstInNext = items.findIndex(i => i.type === 'task' && i.block === nb)
-
-          if (firstInNext !== -1) {
-            // Свап с первой задачей следующего блока
-            ;[items[idx], items[firstInNext]] = [items[firstInNext], items[idx]]
-            const a = items[idx]; if (a.type === 'task') items[idx] = { ...a, block }
-            const b = items[firstInNext]; if (b.type === 'task') items[firstInNext] = { ...b, block: nb }
-          } else {
-            // Следующий блок пуст — переносим сразу после его разделителя
-            const nextSepIdx = items.findIndex(i => i.type === 'separator' && i.block === nb)
-            if (nextSepIdx === -1) return prev
-            items.splice(idx, 1)
-            const adjustedSep = idx < nextSepIdx ? nextSepIdx - 1 : nextSepIdx
-            items.splice(adjustedSep + 1, 0, { ...item, block: nb })
-          }
+          const nextSepIdx = items.findIndex(i => i.type === 'separator' && i.block === nb)
+          if (nextSepIdx === -1) return prev
+          items.splice(idx, 1)
+          const adjustedSep = idx < nextSepIdx ? nextSepIdx - 1 : nextSepIdx
+          items.splice(adjustedSep + 1, 0, { ...item, block: nb })
         }
       }
 
