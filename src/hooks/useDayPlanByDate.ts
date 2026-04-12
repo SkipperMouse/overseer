@@ -9,11 +9,10 @@ interface RawDescRow {
 export function canMove(items: DayItem[], id: string, direction: 'up' | 'down'): boolean {
   const idx = items.findIndex(i => i.id === id)
   if (idx === -1) return false
-  const block = items[idx].block
   if (direction === 'up') {
-    return items.slice(0, idx).some(i => i.block === block && i.type === 'task')
+    return items.slice(0, idx).some(i => i.type === 'task')
   }
-  return items.slice(idx + 1).some(i => i.block === block && i.type === 'task')
+  return items.slice(idx + 1).some(i => i.type === 'task')
 }
 
 export function useDayPlanByDate(date: string) {
@@ -78,14 +77,27 @@ export function useDayPlanByDate(date: string) {
       const items = [...prev.items]
       const idx = items.findIndex(i => i.id === id)
       if (idx === -1) return prev
-      const block = items[idx].block
 
       const swapIdx = direction === 'up'
-        ? [...items.keys()].filter(i => i < idx && items[i].block === block && items[i].type === 'task').at(-1)
-        : items.findIndex((item, i) => i > idx && item.block === block && item.type === 'task')
+        ? [...items.keys()].filter(i => i < idx && items[i].type === 'task').at(-1)
+        : items.findIndex((item, i) => i > idx && item.type === 'task')
 
       if (swapIdx === undefined || swapIdx === -1) return prev
       ;[items[idx], items[swapIdx]] = [items[swapIdx], items[idx]]
+
+      // Обновить block у обоих элементов по ближайшему предшествующему разделителю
+      function inferBlock(pos: number): Block {
+        for (let i = pos - 1; i >= 0; i--) {
+          if (items[i].type === 'separator') return items[i].block
+        }
+        return 'morning'
+      }
+      if (items[idx].type === 'task') {
+        items[idx] = { ...items[idx], block: inferBlock(idx) } as TaskItem
+      }
+      if (items[swapIdx].type === 'task') {
+        items[swapIdx] = { ...items[swapIdx], block: inferBlock(swapIdx) } as TaskItem
+      }
 
       const next = { ...prev, items }
       persistItems(prev.id, items)
