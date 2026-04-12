@@ -82,6 +82,27 @@ export function useDayPlanByDate(date: string) {
     })
   }, [persistItems])
 
+  const reorderBlock = useCallback((block: Block, orderedIds: string[]) => {
+    setPlan(prev => {
+      if (!prev) return prev
+      const blockTaskMap = new Map(
+        prev.items
+          .filter((i): i is TaskItem => i.type === 'task' && i.block === block)
+          .map(i => [i.id, i])
+      )
+      const reorderedTasks = orderedIds
+        .map(id => blockTaskMap.get(id))
+        .filter((i): i is TaskItem => !!i)
+        .map((item, idx) => ({ ...item, position: idx }))
+      let taskIdx = 0
+      const newItems = prev.items.map(item =>
+        item.type === 'task' && item.block === block ? reorderedTasks[taskIdx++] : item
+      )
+      persistItems(prev.id, newItems)
+      return { ...prev, items: newItems }
+    })
+  }, [persistItems])
+
   const moveItem = useCallback((id: string, direction: 'up' | 'down') => {
     setPlan(prev => {
       if (!prev) return prev
@@ -223,6 +244,7 @@ export function useDayPlanByDate(date: string) {
     taskDescIds,
     toggleItem,
     moveItem,
+    reorderBlock,
     saveNote,
     removeItem,
     addTaskItem,

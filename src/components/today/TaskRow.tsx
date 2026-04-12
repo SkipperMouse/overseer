@@ -1,33 +1,36 @@
+import type { DraggableAttributes } from '@dnd-kit/core'
 import type { TaskItem } from '../../types'
 
 interface Props {
   item: TaskItem
-  canMoveUp: boolean
-  canMoveDown: boolean
   hasDesc?: boolean
-  readonly?: boolean
+  editMode?: boolean
+  isDragging?: boolean
+  dragProps?: {
+    attributes: DraggableAttributes
+    listeners: Record<string, unknown> | undefined
+  }
   onToggle: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
   onDelete?: () => void
 }
 
 export default function TaskRow({
-  item, canMoveUp, canMoveDown, hasDesc,
-  readonly, onToggle, onMoveUp, onMoveDown, onDelete,
+  item, hasDesc, editMode, isDragging, dragProps, onToggle, onDelete,
 }: Props) {
   return (
     <div
-      className={`task-row${item.checked ? ' done' : ''}`}
-      onClick={readonly ? undefined : onToggle}
+      className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
+      onClick={editMode ? undefined : onToggle}
+      {...(editMode && dragProps ? dragProps.attributes : {})}
+      {...(editMode && dragProps ? dragProps.listeners : {})}
     >
       <input
         type="checkbox"
         className="checkbox"
         checked={item.checked}
-        onChange={readonly ? undefined : onToggle}
+        onChange={onToggle}
         onClick={e => e.stopPropagation()}
-        readOnly={readonly}
+        onPointerDown={e => e.stopPropagation()}
       />
 
       {item.icon && (
@@ -44,27 +47,11 @@ export default function TaskRow({
         <span className="task-desc-indicator">¶</span>
       )}
 
-      {!readonly && (
-        <div className="task-move-btns" onClick={e => e.stopPropagation()}>
-          <button
-            className="move-btn"
-            disabled={!canMoveUp}
-            onClick={onMoveUp}
-            aria-label="переместить вверх"
-          >↑</button>
-          <button
-            className="move-btn"
-            disabled={!canMoveDown}
-            onClick={onMoveDown}
-            aria-label="переместить вниз"
-          >↓</button>
-        </div>
-      )}
-
       {onDelete && (
         <button
           className="pool-del-btn"
           onClick={e => { e.stopPropagation(); onDelete() }}
+          onPointerDown={e => e.stopPropagation()}
           aria-label="удалить задачу"
         >×</button>
       )}
