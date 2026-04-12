@@ -14,7 +14,7 @@ export default function TaskDescriptionScreen({ task, onSave, onBack }: Props) {
           ← back
         </button>
         <span className="desc-title">
-          {task.icon && <span className="desc-title-icon">{task.icon}</span>}
+          {task.icon && <span className="desc-title-icon pip-emoji">{task.icon}</span>}
           {task.title}
         </span>
       </header>
