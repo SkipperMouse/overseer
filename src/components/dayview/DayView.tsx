@@ -1,9 +1,13 @@
 import { useState, useRef } from 'react'
-import { useDayPlanByDate, canMove } from '../../hooks/useDayPlanByDate'
+import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
-import type { Task, TaskItem, Block } from '../../types'
+import type { Task, TaskItem, SeparatorItem, Block } from '../../types'
 import SectionHeader from '../today/SectionHeader'
 import TaskRow from '../today/TaskRow'
+import SortableTaskRow from '../today/SortableTaskRow'
 import EmojiPicker from '../tasks/EmojiPicker'
 
 type PendingAdd =
@@ -39,7 +43,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
   const {
     plan, loading, taskDescIds,
-    toggleItem, moveItem, saveNote, removeItem, addTaskItem, addOneOffTask,
+    toggleItem, reorderBlock, saveNote, removeItem, addTaskItem, addOneOffTask,
   } = useDayPlanByDate(date)
   const { tasks: allTasks } = useTasks()
 
@@ -53,6 +57,11 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   const noteRef = useRef<HTMLTextAreaElement>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   if (loading) {
     return (
@@ -132,6 +141,15 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     setPendingAdd(null)
   }
 
+  function handleDragEnd(block: Block, event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const blockTasks = plan!.items.filter((i): i is TaskItem => i.type === 'task' && i.block === block)
+    const oldIdx = blockTasks.findIndex(i => i.id === active.id)
+    const newIdx = blockTasks.findIndex(i => i.id === over.id)
+    reorderBlock(block, arrayMove(blockTasks, oldIdx, newIdx).map(i => i.id))
+  }
+
   return (
     <div className="day-view-screen">
       {showEmojiPicker && (
@@ -168,24 +186,46 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       </header>
 
       <div className="today-content">
-        {plan.items.map(item =>
-          item.type === 'separator' ? (
-            <SectionHeader key={item.id} label={item.label} />
-          ) : (
-            <TaskRow
-              key={item.id}
-              item={item}
-              canMoveUp={canMove(plan.items, item.id, 'up')}
-              canMoveDown={canMove(plan.items, item.id, 'down')}
-              hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
-              readonly={isReadonly}
-              onToggle={() => toggleItem(item.id)}
-              onMoveUp={() => moveItem(item.id, 'up')}
-              onMoveDown={() => moveItem(item.id, 'down')}
-              onDelete={mode === 'edit' ? () => removeItem(item.id) : undefined}
-            />
+        {BLOCKS.map(block => {
+          const sep = plan.items.find((i): i is SeparatorItem => i.type === 'separator' && i.block === block)
+          const blockTasks = plan.items.filter((i): i is TaskItem => i.type === 'task' && i.block === block)
+          return (
+            <div key={block}>
+              {sep
+                ? <SectionHeader label={sep.label} />
+                : <SectionHeader label={BLOCK_LABELS[block]} />
+              }
+              {mode === 'edit' ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={e => handleDragEnd(block, e)}
+                >
+                  <SortableContext items={blockTasks.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                    {blockTasks.map(item => (
+                      <SortableTaskRow
+                        key={item.id}
+                        item={item}
+                        hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
+                        onToggle={() => toggleItem(item.id)}
+                        onDelete={() => removeItem(item.id)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                blockTasks.map(item => (
+                  <TaskRow
+                    key={item.id}
+                    item={item}
+                    hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
+                    onToggle={isReadonly ? () => {} : () => toggleItem(item.id)}
+                  />
+                ))
+              )}
+            </div>
           )
-        )}
+        })}
 
         {tasks.length === 0 && (
           <div className="today-empty">

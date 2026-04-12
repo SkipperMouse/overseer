@@ -135,20 +135,36 @@ body {
   opacity: 0.30;
 }
 
-/* ─── DnD grip ─────────────────────────────────────────────────── */
-.drag-grip {
-  color: #1a2e1a;
+/* ─── Edit-mode drag zone ───────────────────────────────────────── */
+.task-row.edit-mode {
   cursor: grab;
   user-select: none;
-  font-size: 14px;
 }
 
-.drag-grip:active {
+.task-row.edit-mode:active {
   cursor: grabbing;
+}
+
+.task-row.edit-mode .task-title,
+.task-row.edit-mode .task-icon,
+.task-row.edit-mode .task-duration,
+.task-row.edit-mode .task-desc-indicator {
+  pointer-events: none;
+}
+
+.task-row.edit-mode .checkbox,
+.task-row.edit-mode .pool-del-btn {
+  pointer-events: auto;
 }
 
 .task-row.dragging {
   background: #0d1a0d;
+  opacity: 0.5;
+}
+
+.tmpl-item-row.dragging {
+  background: #0d1a0d;
+  opacity: 0.5;
 }
 
 /* ─── Pool tags ────────────────────────────────────────────────── */
