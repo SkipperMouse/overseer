@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { DragEndEvent } from '@dnd-kit/core'
@@ -41,10 +41,38 @@ interface NoteAreaProps {
 function NoteArea({ initialValue, onSave }: NoteAreaProps) {
   const [value, setValue] = useState(initialValue)
   const [focused, setFocused] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const valueRef = useRef(value)
+  const onSaveRef = useRef(onSave)
 
-  const handleSave = useCallback((v: string) => {
-    onSave(v)
-  }, [onSave])
+  // Keep refs current on every render
+  useEffect(() => {
+    valueRef.current = value
+    onSaveRef.current = onSave
+  })
+
+  // Sync state when initialValue changes (date/plan switch)
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+
+  // Final save on unmount (screen switch without blur)
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+      onSaveRef.current(valueRef.current)
+    }
+  }, [])
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const v = e.target.value
+    setValue(v)
+    valueRef.current = v
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onSaveRef.current(v)
+    }, 500)
+  }, [])
 
   return (
     <div className="note-area">
@@ -56,9 +84,9 @@ function NoteArea({ initialValue, onSave }: NoteAreaProps) {
         <textarea
           className="note-input"
           value={value}
-          onChange={e => setValue(e.target.value)}
+          onChange={handleChange}
           onFocus={() => setFocused(true)}
-          onBlur={e => { setFocused(false); handleSave(e.target.value) }}
+          onBlur={e => { setFocused(false); onSaveRef.current(e.target.value) }}
         />
       </div>
     </div>
@@ -369,7 +397,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
           </div>
         )}
 
-        <NoteArea key={plan.id} initialValue={plan.note ?? ''} onSave={saveNote} />
+        <NoteArea initialValue={plan.note ?? ''} onSave={saveNote} />
       </div>
 
       {pendingAdd && (
