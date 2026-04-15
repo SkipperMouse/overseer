@@ -111,6 +111,7 @@ export default function NewDayScreen({ onDone }: Props) {
   const [draftItems, setDraftItems] = useState<DraftItem[]>([])
   const [pendingForBlock, setPendingForBlock] = useState<PendingForBlock | null>(null)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // One-off task form
   const [showOnetimeForm, setShowOnetimeForm] = useState(false)
@@ -261,34 +262,47 @@ export default function NewDayScreen({ onDone }: Props) {
   }
 
   async function save() {
+    if (saving) return
     setSaving(true)
-    const posCounters: Record<Block, number> = { morning: 0, day: 0, evening: 0 }
-    const finalItems = draftItems.map(item => {
-      if (item.type === 'separator') {
-        return { id: crypto.randomUUID(), type: 'separator' as const, label: item.label, block: item.block }
-      }
-      const position = posCounters[item.block]++
-      return {
-        id: crypto.randomUUID(),
-        type: 'task' as const,
-        task_id: item.taskId ?? null,
-        title: item.title,
-        duration: item.duration,
-        icon: item.icon,
-        block: item.block,
-        time: null,
-        checked: false,
-        position,
-      }
-    })
+    setSaveError(null)
+    try {
+      const posCounters: Record<Block, number> = { morning: 0, day: 0, evening: 0 }
+      const finalItems = draftItems.map(item => {
+        if (item.type === 'separator') {
+          return { id: crypto.randomUUID(), type: 'separator' as const, label: item.label, block: item.block }
+        }
+        const position = posCounters[item.block]++
+        return {
+          id: crypto.randomUUID(),
+          type: 'task' as const,
+          task_id: item.taskId ?? null,
+          title: item.title,
+          duration: item.duration,
+          icon: item.icon,
+          block: item.block,
+          time: null,
+          checked: false,
+          position,
+        }
+      })
 
-    const { error } = await supabase
-      .from('day_plans')
-      .insert({ date: todayDate(), items: finalItems, note: '' })
+      const { error } = await supabase
+        .from('day_plans')
+        .insert({ date: todayDate(), items: finalItems, note: '' })
 
-    setSaving(false)
-    if (error) { console.error(error); return }
-    onDone()
+      if (error) {
+        if (error.code === '23505') {
+          onDone()
+          return
+        }
+        console.error(error)
+        setSaveError('ошибка сохранения, попробуй ещё раз')
+        return
+      }
+      onDone()
+    } finally {
+      setSaving(false)
+    }
   }
 
   const usedTaskIds = new Set(
@@ -468,6 +482,7 @@ export default function NewDayScreen({ onDone }: Props) {
         </div>
 
         <div className="nd-save-area">
+          {saveError && <div className="nd-save-error text-muted">{saveError}</div>}
           <button className="nd-start-btn" disabled={saving} onClick={save}>
             {saving ? 'сохранение...' : 'начать день'}
           </button>
