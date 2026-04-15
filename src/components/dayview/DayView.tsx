@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
+import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import type { DragEndEvent } from '@dnd-kit/core'
+import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
 import type { Task, TaskItem, SeparatorItem, Block } from '../../types'
@@ -104,11 +104,14 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
   const {
     plan, loading, taskDescIds,
-    toggleItem, reorderBlock, saveNote, removeItem, addTaskItem, addOneOffTask,
+    toggleItem, reorderBlock, moveCrossBlockLocal, moveCrossBlock, saveNote, removeItem, addTaskItem, addOneOffTask,
   } = useDayPlanByDate(date)
   const { tasks: allTasks, updateDescription } = useTasks()
 
   const [mode, setMode] = useState<'view' | 'edit'>('view')
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const dragActiveIdRef = useRef<string | null>(null)
+  const dragActiveBlockRef = useRef<string | null>(null)
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null)
   const [showAddPool, setShowAddPool] = useState(false)
   const [showOnetimeForm, setShowOnetimeForm] = useState(false)
@@ -210,13 +213,47 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     setPendingAdd(null)
   }
 
-  function handleDragEnd(block: Block, event: DragEndEvent) {
+  function handleDragStart(event: DragStartEvent) {
+    setDraggingId(String(event.active.id))
+  }
+
+  function handleDragOver(event: DragOverEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const blockTasks = plan!.items.filter((i): i is TaskItem => i.type === 'task' && i.block === block)
-    const oldIdx = blockTasks.findIndex(i => i.id === active.id)
-    const newIdx = blockTasks.findIndex(i => i.id === over.id)
-    reorderBlock(block, arrayMove(blockTasks, oldIdx, newIdx).map(i => i.id))
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    // Lazy-init ref when a new drag starts
+    if (dragActiveIdRef.current !== activeId) {
+      dragActiveIdRef.current = activeId
+      const item = plan?.items.find(i => i.id === activeId && i.type === 'task') as TaskItem | undefined
+      dragActiveBlockRef.current = item?.block ?? null
+    }
+    const overItem = plan?.items.find(i => i.id === overId && i.type === 'task') as TaskItem | undefined
+    if (!overItem || dragActiveBlockRef.current === overItem.block) return
+    // Block changed — update ref synchronously before state update lands
+    dragActiveBlockRef.current = overItem.block
+    moveCrossBlockLocal(activeId, overId)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingId(null)
+    dragActiveIdRef.current = null
+    dragActiveBlockRef.current = null
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    const activeItem = plan!.items.find((i): i is TaskItem => i.id === activeId && i.type === 'task')
+    const overItem = plan!.items.find((i): i is TaskItem => i.id === overId && i.type === 'task')
+    if (!activeItem || !overItem) return
+    if (activeItem.block === overItem.block) {
+      const blockTasks = plan!.items.filter((i): i is TaskItem => i.type === 'task' && i.block === activeItem.block)
+      const oldIdx = blockTasks.findIndex(i => i.id === activeId)
+      const newIdx = blockTasks.findIndex(i => i.id === overId)
+      reorderBlock(activeItem.block, arrayMove(blockTasks, oldIdx, newIdx).map(i => i.id))
+    } else {
+      moveCrossBlock(activeId, overId)
+    }
   }
 
   function handleDescClick(item: TaskItem) {
@@ -261,23 +298,28 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       </header>
 
       <div className="today-content">
-        {BLOCKS.map(block => {
-          const sep = plan.items.find((i): i is SeparatorItem => i.type === 'separator' && i.block === block)
-          const blockTasks = plan.items.filter((i): i is TaskItem => i.type === 'task' && i.block === block)
-          return (
-            <div key={block}>
-              {sep
-                ? <SectionHeader label={sep.label} />
-                : <SectionHeader label={BLOCK_LABELS[block]} />
-              }
-              {mode === 'edit' ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={e => handleDragEnd(block, e)}
-                >
-                  <SortableContext items={blockTasks.map(i => i.id)} strategy={verticalListSortingStrategy}>
-                    {blockTasks.map(item => (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={plan.items.filter(i => i.type === 'task').map(i => i.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {BLOCKS.map(block => {
+              const sep = plan.items.find((i): i is SeparatorItem => i.type === 'separator' && i.block === block)
+              const blockTasks = plan.items.filter((i): i is TaskItem => i.type === 'task' && i.block === block)
+              return (
+                <div key={block}>
+                  {sep
+                    ? <SectionHeader label={sep.label} />
+                    : <SectionHeader label={BLOCK_LABELS[block]} />
+                  }
+                  {mode === 'edit' ? (
+                    blockTasks.map(item => (
                       <SortableTaskRow
                         key={item.id}
                         item={item}
@@ -286,23 +328,38 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                         onDelete={() => removeItem(item.id)}
                         onDescClick={() => handleDescClick(item)}
                       />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                blockTasks.map(item => (
-                  <TaskRow
-                    key={item.id}
-                    item={item}
-                    hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
-                    onToggle={() => toggleItem(item.id)}
-                    onDescClick={() => handleDescClick(item)}
-                  />
-                ))
-              )}
-            </div>
-          )
-        })}
+                    ))
+                  ) : (
+                    blockTasks.map(item => (
+                      <TaskRow
+                        key={item.id}
+                        item={item}
+                        hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
+                        onToggle={() => toggleItem(item.id)}
+                        onDescClick={() => handleDescClick(item)}
+                      />
+                    ))
+                  )}
+                </div>
+              )
+            })}
+          </SortableContext>
+          <DragOverlay dropAnimation={null}>
+            {(() => {
+              if (!draggingId) return null
+              const item = plan.items.find(i => i.id === draggingId && i.type === 'task') as TaskItem | undefined
+              if (!item) return null
+              return (
+                <TaskRow
+                  item={item}
+                  hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
+                  editMode={true}
+                  onToggle={() => {}}
+                />
+              )
+            })()}
+          </DragOverlay>
+        </DndContext>
 
         {tasks.length === 0 && (
           <div className="today-empty">

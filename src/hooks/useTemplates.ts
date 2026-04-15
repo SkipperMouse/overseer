@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Template, TemplateItem, Task, Block } from '../types'
 
@@ -193,6 +193,46 @@ export function useTemplateItems(templateId: string) {
     if (error) console.error(error)
   }, [])
 
+  // Ref to always access latest items inside async callbacks
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+
+  const moveCrossBlockLocal = useCallback((activeId: string, overId: string) => {
+    setItems(prev => {
+      const activeItem = prev.find(i => i.id === activeId)
+      const overItem = prev.find(i => i.id === overId)
+      if (!activeItem || !overItem || activeItem.block === overItem.block) return prev
+      // Place active before over using a fractional position (normalized on dragEnd)
+      return prev.map(i =>
+        i.id === activeId ? { ...i, block: overItem.block, position: overItem.position - 0.5 } : i
+      )
+    })
+  }, [])
+
+  const moveCrossBlock = useCallback(async (activeId: string, overId: string) => {
+    setItems(prev => {
+      const activeItem = prev.find(i => i.id === activeId)
+      const overItem = prev.find(i => i.id === overId)
+      if (!activeItem || !overItem) return prev
+      const targetBlock = overItem.block
+      const targetItems = prev
+        .filter(i => i.block === targetBlock && i.id !== activeId)
+        .sort((a, b) => a.position - b.position)
+      const overIdx = targetItems.findIndex(i => i.id === overId)
+      const insertAt = overIdx >= 0 ? overIdx : targetItems.length
+      targetItems.splice(insertAt, 0, { ...activeItem, block: targetBlock })
+      const posMap = new Map(targetItems.map((item, idx) => [item.id, idx]))
+      ;(async () => {
+        await Promise.all(
+          targetItems.map((item, idx) =>
+            supabase.from('template_items').update({ block: targetBlock, position: idx }).eq('id', item.id)
+          )
+        )
+      })()
+      return prev.map(i => posMap.has(i.id) ? { ...i, block: targetBlock, position: posMap.get(i.id)! } : i)
+    })
+  }, [])
+
   const reorderBlock = useCallback(async (_block: Block, orderedIds: string[]) => {
     const posMap = new Map(orderedIds.map((id, idx) => [id, idx]))
     setItems(prev => prev.map(item =>
@@ -233,5 +273,5 @@ export function useTemplateItems(templateId: string) {
     ])
   }, [items])
 
-  return { items, tasks, loading, addTaskItem, addSeparator, deleteItem, moveItem, reorderBlock }
+  return { items, tasks, loading, addTaskItem, addSeparator, deleteItem, moveItem, reorderBlock, moveCrossBlockLocal, moveCrossBlock }
 }
