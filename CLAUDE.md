@@ -70,12 +70,11 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 ### Navigation model
 
-`App.tsx` holds a `Screen` union (`today | new-day | templates | pool | history`) and renders one top-level screen at a time. `BottomNav` uses a narrower union that excludes `new-day` (it's hidden on that screen). Three screens manage their own sub-navigation internally via local state:
+`App.tsx` holds a `Screen` union (`today | new-day | pool | history`) and renders one top-level screen at a time. `BottomNav` uses a narrower union that excludes `new-day` (it's hidden on that screen). Screens manage their own sub-navigation internally via local state:
 
-- **TodayScreen** — thin wrapper: renders `<DayView date={today} onNewDay={...} />`; shows `NewDayScreen` flow via `onNewDay` prop when no plan exists
-- **TaskPoolScreen** — renders `TaskDescriptionScreen` in place when `descTask !== null`
-- **TemplatesScreen** — renders `TemplateEditScreen` in place when `editing !== null`
-- **HistoryScreen** — renders `DayView` in place when `viewingDate !== null`
+- **TodayScreen** — accepts optional `date?: string` (defaults to today), `onBack?: () => void`, `onNewDay?: () => void`. Thin wrapper around `<DayView>`.
+- **TaskPoolScreen** — renders `TemplateEditScreen` in place when `editingTemplate !== null`; renders `TaskDescriptionScreen` in place when `descTask !== null`. Contains both the Templates section (top) and Task Pool section (bottom) with global search across both.
+- **HistoryScreen** — renders `TodayScreen` (with `date` + `onBack` props) in place when `viewingDate !== null`.
 
 **Adding a new top-level screen** requires four changes: new hook + component under `src/components/<name>/`, CSS section in `src/index.css`, import + render in `App.tsx`, and adding the id to `NAV_ITEMS` in `BottomNav.tsx` (also update the `Screen` type there).
 
@@ -86,8 +85,10 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 Props: `{ date: string, onNewDay?: () => void, onBack?: () => void }`
 
 Two modes:
-- **View mode** — for today: tasks are interactive (toggle checked, move ↑↓), note is editable on blur. For historical days: everything readonly, no interactive elements. Header has `[ edit ]` button.
-- **Edit mode** (same for all days) — add task from pool, add one-off task (both via block-picker overlay), delete tasks, move ↑↓, toggle checked, edit note. Header has `[ done ]` button that persists and returns to view.
+- **View mode** — for today: checkbox toggles on click of `task-check-area` (left ~32px of row), description indicator (¶) navigates to `TaskDescriptionScreen`. For historical days: everything readonly. Header has `[ edit ]` button.
+- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within each block. Checkboxes are visually muted and non-interactive in edit mode (`touch-action: none` on rows). Header has `[ done ]` button.
+
+Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a `DndContext` + `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable.
 
 ### New Day flow
 
@@ -102,12 +103,20 @@ One-off tasks have `task_id: null` in the saved JSONB — they never touch the `
 
 Each hook owns its slice of state and exposes optimistic-update mutations:
 
-- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `moveItem`, `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Also exports `canMove` helper. Reset loading/plan on date change.
+- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `reorderBlock`, `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Also exports `canMove` helper. Reset loading/plan on date change.
 - `useDayPlan` — thin wrapper: `useDayPlanByDate(todayDate())`; re-exports `canMove`
 - `useTasks` — task pool; `createTask`, `updateTask`, `deleteTask`, `createDescription`, `updateDescription`
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
-- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `moveItem`
+- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`
 - `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
+
+### Drag-and-drop
+
+`@dnd-kit/core` + `@dnd-kit/sortable` handle reordering. One `DndContext` per block (three per screen) enforces within-block-only dragging. Pattern used in three places: DayView edit mode (via `SortableTaskRow`), `TemplateEditScreen` (`SortableTmplRow` local component), `NewDayScreen` build-plan step (`SortableDraftRow` local component). All use `PointerSensor` with `activationConstraint: { distance: 8 }`.
+
+`reorderBlock(block, orderedIds)` — accepts the new id order for a block and rebuilds the flat items array (day plans) or swaps positions (template items) before persisting.
+
+In `TemplateEditScreen`, the entire `.tmpl-item-row` is draggable (no separate drag-grip element). The delete button uses `onPointerDown={e => e.stopPropagation()}` to prevent drag activation.
 
 ### Optimistic updates pattern
 
@@ -121,6 +130,7 @@ Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real
 - TypeScript strict — никаких `any`, никаких `as unknown`
 - Оптимистичные апдейты: сначала обновляем локальный state, потом Supabase
 - Дата всегда локальная: `new Date().toLocaleDateString('en-CA')` → `YYYY-MM-DD`
+- Duration хранится как числовая строка (`"30"`, `"0"`), отображается с суффиксом `M` (`"30M"`) — никогда не сохранять `M` в БД. В инпутах `type="number"`, `step="10"`, округление до кратного 10 при blur.
 
 ## Дизайн-система — ОБЯЗАТЕЛЬНО
 
@@ -138,7 +148,7 @@ Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real
 
 Emoji иконки задач всегда рендерятся с классом `pip-emoji` (Pip-Boy фильтр: `filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4)`). Применяется везде где отображается иконка задачи — в плане, пуле, шаблонах, пикере. Не применять к навигации и системным элементам.
 
-Существующие CSS-классы для повторного использования: `.pool-add-btn`, `.pool-del-btn`, `.pool-del-confirm`, `.pool-input`, `.pool-save-btn`, `.move-btn`, `.task-move-btns`, `.task-icon`, `.task-duration`, `.desc-back`, `.label-section`, `.text-muted`, `.prompt-line`, `.blink-cursor`, `.section-header`, `.pip-emoji`, `.task-desc-indicator`, `.progress-track`, `.progress-fill`, `.history-item`, `.nd-picker-overlay`, `.nd-picker`, `.nd-pool-item`, `.day-view-action-btn`.
+Существующие CSS-классы для повторного использования: `.pool-add-btn`, `.pool-del-btn`, `.pool-del-confirm`, `.pool-input`, `.pool-save-btn`, `.pool-section-header`, `.task-icon`, `.task-duration`, `.task-check-area`, `.desc-back`, `.label-section`, `.text-muted`, `.prompt-line`, `.blink-cursor`, `.section-header`, `.pip-emoji`, `.task-desc-indicator`, `.progress-track`, `.progress-fill`, `.history-item`, `.nd-picker-overlay`, `.nd-picker`, `.nd-pool-item`, `.day-view-action-btn`, `.task-row.dragging`, `.tmpl-item-row`.
 
 ## TypeScript типы
 

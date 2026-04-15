@@ -1,4 +1,4 @@
-type Screen = 'today' | 'templates' | 'pool' | 'history'
+type Screen = 'today' | 'pool' | 'history'
 
 interface Props {
   active: Screen
@@ -6,10 +6,9 @@ interface Props {
 }
 
 const NAV_ITEMS: { id: Screen; label: string }[] = [
-  { id: 'today',     label: 'TODAY' },
-  { id: 'templates', label: 'TMPL'  },
-  { id: 'pool',      label: 'POOL'  },
-  { id: 'history',   label: 'HIST'  },
+  { id: 'today',   label: 'TODAY' },
+  { id: 'pool',    label: 'POOL'  },
+  { id: 'history', label: 'HIST'  },
 ]
 
 export default function BottomNav({ active, onNavigate }: Props) {

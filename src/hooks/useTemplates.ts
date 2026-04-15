@@ -193,6 +193,18 @@ export function useTemplateItems(templateId: string) {
     if (error) console.error(error)
   }, [])
 
+  const reorderBlock = useCallback(async (_block: Block, orderedIds: string[]) => {
+    const posMap = new Map(orderedIds.map((id, idx) => [id, idx]))
+    setItems(prev => prev.map(item =>
+      posMap.has(item.id) ? { ...item, position: posMap.get(item.id)! } : item
+    ))
+    await Promise.all(
+      orderedIds.map((id, idx) =>
+        supabase.from('template_items').update({ position: idx }).eq('id', id)
+      )
+    )
+  }, [])
+
   const moveItem = useCallback(async (id: string, dir: 'up' | 'down') => {
     const item = items.find(i => i.id === id)
     if (!item) return
@@ -221,5 +233,5 @@ export function useTemplateItems(templateId: string) {
     ])
   }, [items])
 
-  return { items, tasks, loading, addTaskItem, addSeparator, deleteItem, moveItem }
+  return { items, tasks, loading, addTaskItem, addSeparator, deleteItem, moveItem, reorderBlock }
 }

@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import type { DragEndEvent } from '@dnd-kit/core'
 import { supabase } from '../../lib/supabase'
 import type { Template, Task, Block } from '../../types'
 import SectionHeader from './SectionHeader'
@@ -72,6 +76,34 @@ interface Props {
 
 type Step = 'loading' | 'exists' | 'pick-template' | 'build-plan'
 
+function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`task-row${isDragging ? ' dragging' : ''}`}
+    >
+      <span
+        className="drag-grip"
+        {...attributes}
+        {...listeners}
+        onClick={e => e.stopPropagation()}
+      >
+        ⠿
+      </span>
+      {item.icon
+        ? <span className="task-icon pip-emoji">{item.icon}</span>
+        : <span className="task-icon" />
+      }
+      <span className="task-title">{item.title}</span>
+      {item.duration && <span className="task-duration">{item.duration}m</span>}
+      {item.taskId === null && <span className="nd-onetime-badge">разовая</span>}
+      <button className="pool-del-btn" onClick={() => onDelete()}>×</button>
+    </div>
+  )
+}
+
 export default function NewDayScreen({ onDone }: Props) {
   const [step, setStep] = useState<Step>('loading')
   const [templates, setTemplates] = useState<Template[]>([])
@@ -86,6 +118,11 @@ export default function NewDayScreen({ onDone }: Props) {
   const [onetimeDuration, setOnetimeDuration] = useState('')
   const [onetimeIcon, setOnetimeIcon] = useState('')
   const [showOnetimePicker, setShowOnetimePicker] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   useEffect(() => {
     Promise.all([
@@ -208,25 +245,18 @@ export default function NewDayScreen({ onDone }: Props) {
     setDraftItems(prev => prev.filter(i => i.id !== id))
   }
 
-  function moveInDraft(id: string, dir: 'up' | 'down') {
+  function handleDraftDragEnd(block: Block, event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const blockTasks = draftItems.filter((i): i is DraftTaskItem => i.type === 'task' && i.block === block)
+    const oldIdx = blockTasks.findIndex(i => i.id === active.id)
+    const newIdx = blockTasks.findIndex(i => i.id === over.id)
+    const reordered = arrayMove(blockTasks, oldIdx, newIdx)
     setDraftItems(prev => {
-      const items = [...prev]
-      const idx = items.findIndex(i => i.id === id)
-      if (idx === -1) return prev
-      const block = items[idx].block
-
-      const blockTaskIndices = items
-        .map((item, i) => ({ item, i }))
-        .filter(({ item }) => item.block === block && item.type === 'task')
-        .map(({ i }) => i)
-
-      const posInBlock = blockTaskIndices.indexOf(idx)
-      const swapPos = dir === 'up' ? posInBlock - 1 : posInBlock + 1
-      if (swapPos < 0 || swapPos >= blockTaskIndices.length) return prev
-
-      const swapIdx = blockTaskIndices[swapPos]
-      ;[items[idx], items[swapIdx]] = [items[swapIdx], items[idx]]
-      return items
+      let taskIdx = 0
+      return prev.map(item =>
+        item.type === 'task' && item.block === block ? reordered[taskIdx++] : item
+      )
     })
   }
 
@@ -338,30 +368,21 @@ export default function NewDayScreen({ onDone }: Props) {
           return (
             <div key={block} className="nd-block">
               <SectionHeader label={BLOCK_LABELS[block]} />
-              {blockTasks.map((item, idx) => (
-                <div key={item.id} className="task-row">
-                  {item.icon
-                    ? <span className="task-icon pip-emoji">{item.icon}</span>
-                    : <span className="task-icon" />
-                  }
-                  <span className="task-title">{item.title}</span>
-                  {item.duration && <span className="task-duration">{item.duration}</span>}
-                  {item.taskId === null && <span className="nd-onetime-badge">разовая</span>}
-                  <div className="task-move-btns" onClick={e => e.stopPropagation()}>
-                    <button
-                      className="move-btn"
-                      disabled={idx === 0}
-                      onClick={() => moveInDraft(item.id, 'up')}
-                    >↑</button>
-                    <button
-                      className="move-btn"
-                      disabled={idx === blockTasks.length - 1}
-                      onClick={() => moveInDraft(item.id, 'down')}
-                    >↓</button>
-                  </div>
-                  <button className="pool-del-btn" onClick={() => removeFromDraft(item.id)}>×</button>
-                </div>
-              ))}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={e => handleDraftDragEnd(block, e)}
+              >
+                <SortableContext items={blockTasks.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                  {blockTasks.map(item => (
+                    <SortableDraftRow
+                      key={item.id}
+                      item={item}
+                      onDelete={() => removeFromDraft(item.id)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
               {blockTasks.length === 0 && (
                 <div className="nd-block-empty text-muted">// пусто</div>
               )}
@@ -383,7 +404,7 @@ export default function NewDayScreen({ onDone }: Props) {
                 : <span className="task-icon" />
               }
               <span className="nd-pool-title">{task.title}</span>
-              {task.duration && <span className="task-duration">{task.duration}</span>}
+              {task.duration && <span className="task-duration">{task.duration}m</span>}
               <span className="nd-pool-plus">+</span>
             </button>
           ))}

@@ -1,4 +1,8 @@
 import { useState } from 'react'
+import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import type { DragEndEvent } from '@dnd-kit/core'
 import { useTemplateItems } from '../../hooks/useTemplates'
 import type { Template, TemplateItem, Block, Task } from '../../types'
 
@@ -63,7 +67,7 @@ function TaskPicker({ tasks, onSelect, onClose }: TaskPickerProps) {
               {task.icon && <span className="task-icon pip-emoji">{task.icon}</span>}
               <span className="tmpl-picker-title">{task.title}</span>
               {task.duration && (
-                <span className="task-duration">{task.duration}</span>
+                <span className="task-duration">{task.duration}m</span>
               )}
             </button>
           ))}
@@ -105,6 +109,42 @@ function SepInput({ onConfirm, onCancel }: SepInputProps) {
   )
 }
 
+function SortableTmplRow({ item, onDelete }: { item: TemplateItem; onDelete: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`tmpl-item-row${isDragging ? ' dragging' : ''}`}
+      {...attributes}
+      {...listeners}
+    >
+      {item.type === 'separator' ? (
+        <span className="tmpl-item-sep-label text-muted">
+          — {item.separator_label}
+        </span>
+      ) : (
+        <>
+          {item.task?.icon && (
+            <span className="task-icon pip-emoji">{item.task.icon}</span>
+          )}
+          <span className="tmpl-item-title">{item.task?.title ?? '?'}</span>
+          {item.task?.duration && (
+            <span className="task-duration">{item.task.duration}m</span>
+          )}
+        </>
+      )}
+      <button
+        className="pool-del-btn"
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        onPointerDown={e => e.stopPropagation()}
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
 interface BlockSectionProps {
   blockKey: Block
   label: string
@@ -113,14 +153,19 @@ interface BlockSectionProps {
   onAddTask: (block: Block, taskId: string) => void
   onAddSeparator: (block: Block, label: string) => void
   onDelete: (id: string) => void
-  onMove: (id: string, dir: 'up' | 'down') => void
+  onReorder: (block: Block, orderedIds: string[]) => void
 }
 
 function BlockSection({
-  blockKey, label, items, tasks, onAddTask, onAddSeparator, onDelete, onMove,
+  blockKey, label, items, tasks, onAddTask, onAddSeparator, onDelete, onReorder,
 }: BlockSectionProps) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [sepInputOpen, setSepInputOpen] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   const blockItems = items
     .filter(i => i.block === blockKey)
@@ -131,6 +176,14 @@ function BlockSection({
   )
   const availableTasks = tasks.filter(t => !addedTaskIds.has(t.id))
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIdx = blockItems.findIndex(i => i.id === active.id)
+    const newIdx = blockItems.findIndex(i => i.id === over.id)
+    onReorder(blockKey, arrayMove(blockItems, oldIdx, newIdx).map(i => i.id))
+  }
+
   return (
     <div className="tmpl-block">
       <div className="section-header">
@@ -138,47 +191,21 @@ function BlockSection({
       </div>
 
       <div className="tmpl-block-items">
-        {blockItems.map((item, idx) => (
-          <div key={item.id} className="tmpl-item-row">
-            {item.type === 'separator' ? (
-              <span className="tmpl-item-sep-label text-muted">
-                — {item.separator_label}
-              </span>
-            ) : (
-              <>
-                {item.task?.icon && (
-                  <span className="task-icon pip-emoji">{item.task.icon}</span>
-                )}
-                <span className="tmpl-item-title">{item.task?.title ?? '?'}</span>
-                {item.task?.duration && (
-                  <span className="task-duration">{item.task.duration}</span>
-                )}
-              </>
-            )}
-            <div className="task-move-btns">
-              <button
-                className="move-btn"
-                disabled={idx === 0}
-                onClick={() => onMove(item.id, 'up')}
-              >
-                ↑
-              </button>
-              <button
-                className="move-btn"
-                disabled={idx === blockItems.length - 1}
-                onClick={() => onMove(item.id, 'down')}
-              >
-                ↓
-              </button>
-            </div>
-            <button
-              className="pool-del-btn"
-              onClick={() => onDelete(item.id)}
-            >
-              ×
-            </button>
-          </div>
-        ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={blockItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            {blockItems.map(item => (
+              <SortableTmplRow
+                key={item.id}
+                item={item}
+                onDelete={() => onDelete(item.id)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
       {sepInputOpen && (
@@ -215,7 +242,7 @@ function BlockSection({
 }
 
 export default function TemplateEditScreen({ template, onBack }: Props) {
-  const { items, tasks, loading, addTaskItem, addSeparator, deleteItem, moveItem } =
+  const { items, tasks, loading, addTaskItem, addSeparator, deleteItem, reorderBlock } =
     useTemplateItems(template.id)
 
   return (
@@ -242,7 +269,7 @@ export default function TemplateEditScreen({ template, onBack }: Props) {
               onAddTask={addTaskItem}
               onAddSeparator={addSeparator}
               onDelete={deleteItem}
-              onMove={moveItem}
+              onReorder={reorderBlock}
             />
           ))
         )}

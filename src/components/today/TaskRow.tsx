@@ -1,34 +1,42 @@
+import type { DraggableAttributes } from '@dnd-kit/core'
 import type { TaskItem } from '../../types'
 
 interface Props {
   item: TaskItem
-  canMoveUp: boolean
-  canMoveDown: boolean
   hasDesc?: boolean
-  readonly?: boolean
+  editMode?: boolean
+  isDragging?: boolean
+  dragProps?: {
+    attributes: DraggableAttributes
+    listeners: Record<string, unknown> | undefined
+  }
   onToggle: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
   onDelete?: () => void
+  onDescClick?: () => void
 }
 
 export default function TaskRow({
-  item, canMoveUp, canMoveDown, hasDesc,
-  readonly, onToggle, onMoveUp, onMoveDown, onDelete,
+  item, hasDesc, editMode, isDragging, dragProps, onToggle, onDelete, onDescClick,
 }: Props) {
   return (
     <div
-      className={`task-row${item.checked ? ' done' : ''}`}
-      onClick={readonly ? undefined : onToggle}
+      className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
+      {...(editMode && dragProps ? dragProps.attributes : {})}
+      {...(editMode && dragProps ? dragProps.listeners : {})}
     >
-      <input
-        type="checkbox"
-        className="checkbox"
-        checked={item.checked}
-        onChange={readonly ? undefined : onToggle}
-        onClick={e => e.stopPropagation()}
-        readOnly={readonly}
-      />
+      <div
+        className="task-check-area"
+        onClick={e => { e.stopPropagation(); if (!editMode) onToggle() }}
+      >
+        <input
+          type="checkbox"
+          className="checkbox"
+          checked={item.checked}
+          onChange={editMode ? () => {} : onToggle}
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+        />
+      </div>
 
       {item.icon && (
         <span className="task-icon pip-emoji">{item.icon}</span>
@@ -37,34 +45,21 @@ export default function TaskRow({
       <span className="task-title">{item.title}</span>
 
       {item.duration && (
-        <span className="task-duration">{item.duration}</span>
+        <span className="task-duration">{item.duration}m</span>
       )}
 
       {item.task_id && hasDesc && (
-        <span className="task-desc-indicator">¶</span>
-      )}
-
-      {!readonly && (
-        <div className="task-move-btns" onClick={e => e.stopPropagation()}>
-          <button
-            className="move-btn"
-            disabled={!canMoveUp}
-            onClick={onMoveUp}
-            aria-label="переместить вверх"
-          >↑</button>
-          <button
-            className="move-btn"
-            disabled={!canMoveDown}
-            onClick={onMoveDown}
-            aria-label="переместить вниз"
-          >↓</button>
-        </div>
+        <span
+          className="task-desc-indicator"
+          onClick={e => { e.stopPropagation(); onDescClick?.() }}
+        >¶</span>
       )}
 
       {onDelete && (
         <button
           className="pool-del-btn"
           onClick={e => { e.stopPropagation(); onDelete() }}
+          onPointerDown={e => e.stopPropagation()}
           aria-label="удалить задачу"
         >×</button>
       )}

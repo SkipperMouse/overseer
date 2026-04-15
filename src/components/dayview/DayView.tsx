@@ -1,10 +1,15 @@
-import { useState, useRef } from 'react'
-import { useDayPlanByDate, canMove } from '../../hooks/useDayPlanByDate'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
-import type { Task, TaskItem, Block } from '../../types'
+import type { Task, TaskItem, SeparatorItem, Block } from '../../types'
 import SectionHeader from '../today/SectionHeader'
 import TaskRow from '../today/TaskRow'
+import SortableTaskRow from '../today/SortableTaskRow'
 import EmojiPicker from '../tasks/EmojiPicker'
+import TaskDescriptionScreen from '../tasks/TaskDescriptionScreen'
 
 type PendingAdd =
   | { kind: 'pool'; task: Task }
@@ -28,6 +33,66 @@ function formatDate(dateStr: string): string {
     .replace(/\.$/, '')
 }
 
+interface NoteAreaProps {
+  initialValue: string
+  onSave: (value: string) => void
+}
+
+function NoteArea({ initialValue, onSave }: NoteAreaProps) {
+  const [value, setValue] = useState(initialValue)
+  const [focused, setFocused] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const valueRef = useRef(value)
+  const onSaveRef = useRef(onSave)
+
+  // Keep refs current on every render
+  useEffect(() => {
+    valueRef.current = value
+    onSaveRef.current = onSave
+  })
+
+  // Sync state when initialValue changes (date/plan switch)
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+
+  // Final save on unmount (screen switch without blur)
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+      onSaveRef.current(valueRef.current)
+    }
+  }, [])
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const v = e.target.value
+    setValue(v)
+    valueRef.current = v
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onSaveRef.current(v)
+    }, 500)
+  }, [])
+
+  return (
+    <div className="note-area">
+      <div className="prompt-line">{'>'} note</div>
+      <div className="note-input-wrap">
+        {value === '' && !focused && (
+          <span className="blink-cursor note-blink-cursor" />
+        )}
+        <textarea
+          className="note-input"
+          value={value}
+          onChange={handleChange}
+          onFocus={() => setFocused(true)}
+          onBlur={e => { setFocused(false); onSaveRef.current(e.target.value) }}
+        />
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   date: string
   onNewDay?: () => void
@@ -39,9 +104,9 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
   const {
     plan, loading, taskDescIds,
-    toggleItem, moveItem, saveNote, removeItem, addTaskItem, addOneOffTask,
+    toggleItem, reorderBlock, saveNote, removeItem, addTaskItem, addOneOffTask,
   } = useDayPlanByDate(date)
-  const { tasks: allTasks } = useTasks()
+  const { tasks: allTasks, updateDescription } = useTasks()
 
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null)
@@ -51,8 +116,12 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const [onetimeDuration, setOnetimeDuration] = useState('')
   const [onetimeIcon, setOnetimeIcon] = useState('')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [descTask, setDescTask] = useState<Task | null>(null)
 
-  const noteRef = useRef<HTMLTextAreaElement>(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   if (loading) {
     return (
@@ -62,6 +131,17 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
           <span className="blink-cursor" />
         </div>
       </div>
+    )
+  }
+
+  if (descTask) {
+    const latest = allTasks.find(t => t.id === descTask.id) ?? descTask
+    return (
+      <TaskDescriptionScreen
+        task={latest}
+        onSave={async content => { await updateDescription(latest.id, content) }}
+        onBack={() => setDescTask(null)}
+      />
     )
   }
 
@@ -100,8 +180,6 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   )
   const poolAvailable = allTasks.filter(t => !usedTaskIds.has(t.id))
 
-  const isReadonly = !isToday && mode === 'view'
-
   function handleDone() {
     setMode('view')
     setShowAddPool(false)
@@ -130,6 +208,21 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       addOneOffTask(pendingAdd.title, block, pendingAdd.duration, pendingAdd.icon)
     }
     setPendingAdd(null)
+  }
+
+  function handleDragEnd(block: Block, event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const blockTasks = plan!.items.filter((i): i is TaskItem => i.type === 'task' && i.block === block)
+    const oldIdx = blockTasks.findIndex(i => i.id === active.id)
+    const newIdx = blockTasks.findIndex(i => i.id === over.id)
+    reorderBlock(block, arrayMove(blockTasks, oldIdx, newIdx).map(i => i.id))
+  }
+
+  function handleDescClick(item: TaskItem) {
+    if (!item.task_id) return
+    const task = allTasks.find(t => t.id === item.task_id)
+    if (task) setDescTask(task)
   }
 
   return (
@@ -168,24 +261,48 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       </header>
 
       <div className="today-content">
-        {plan.items.map(item =>
-          item.type === 'separator' ? (
-            <SectionHeader key={item.id} label={item.label} />
-          ) : (
-            <TaskRow
-              key={item.id}
-              item={item}
-              canMoveUp={canMove(plan.items, item.id, 'up')}
-              canMoveDown={canMove(plan.items, item.id, 'down')}
-              hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
-              readonly={isReadonly}
-              onToggle={() => toggleItem(item.id)}
-              onMoveUp={() => moveItem(item.id, 'up')}
-              onMoveDown={() => moveItem(item.id, 'down')}
-              onDelete={mode === 'edit' ? () => removeItem(item.id) : undefined}
-            />
+        {BLOCKS.map(block => {
+          const sep = plan.items.find((i): i is SeparatorItem => i.type === 'separator' && i.block === block)
+          const blockTasks = plan.items.filter((i): i is TaskItem => i.type === 'task' && i.block === block)
+          return (
+            <div key={block}>
+              {sep
+                ? <SectionHeader label={sep.label} />
+                : <SectionHeader label={BLOCK_LABELS[block]} />
+              }
+              {mode === 'edit' ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={e => handleDragEnd(block, e)}
+                >
+                  <SortableContext items={blockTasks.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                    {blockTasks.map(item => (
+                      <SortableTaskRow
+                        key={item.id}
+                        item={item}
+                        hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
+                        onToggle={() => toggleItem(item.id)}
+                        onDelete={() => removeItem(item.id)}
+                        onDescClick={() => handleDescClick(item)}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                blockTasks.map(item => (
+                  <TaskRow
+                    key={item.id}
+                    item={item}
+                    hasDesc={item.task_id ? taskDescIds.has(item.task_id) : false}
+                    onToggle={() => toggleItem(item.id)}
+                    onDescClick={() => handleDescClick(item)}
+                  />
+                ))
+              )}
+            </div>
           )
-        )}
+        })}
 
         {tasks.length === 0 && (
           <div className="today-empty">
@@ -220,7 +337,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                         : <span className="task-icon" />
                       }
                       <span className="nd-pool-title">{task.title}</span>
-                      {task.duration && <span className="task-duration">{task.duration}</span>}
+                      {task.duration && <span className="task-duration">{task.duration}m</span>}
                       <span className="nd-pool-plus">+</span>
                     </button>
                   ))
@@ -280,23 +397,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
           </div>
         )}
 
-        <div className="note-area">
-          <div className="prompt-line">{'>'} note</div>
-          {isReadonly ? (
-            <div className="note-readonly text-muted">
-              {plan.note || <span className="text-dim">// нет заметок</span>}
-            </div>
-          ) : (
-            <textarea
-              ref={noteRef}
-              key={plan.id}
-              className="note-input"
-              defaultValue={plan.note ?? ''}
-              placeholder="// заметки на день..."
-              onBlur={e => saveNote(e.target.value)}
-            />
-          )}
-        </div>
+        <NoteArea initialValue={plan.note ?? ''} onSave={saveNote} />
       </div>
 
       {pendingAdd && (

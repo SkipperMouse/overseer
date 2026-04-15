@@ -1,0 +1,34 @@
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import TaskRow from './TaskRow'
+import type { TaskItem } from '../../types'
+
+interface Props {
+  item: TaskItem
+  hasDesc: boolean
+  onToggle: () => void
+  onDelete: () => void
+  onDescClick?: () => void
+}
+
+export default function SortableTaskRow({ item, hasDesc, onToggle, onDelete, onDescClick }: Props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      <TaskRow
+        item={item}
+        hasDesc={hasDesc}
+        editMode={true}
+        isDragging={isDragging}
+        dragProps={{ attributes, listeners }}
+        onToggle={onToggle}
+        onDelete={onDelete}
+        onDescClick={onDescClick}
+      />
+    </div>
+  )
+}
