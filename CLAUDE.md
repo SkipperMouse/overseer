@@ -86,9 +86,9 @@ Props: `{ date: string, onNewDay?: () => void, onBack?: () => void }`
 
 Two modes:
 - **View mode** — for today: checkbox toggles on click of `task-check-area` (left ~32px of row), description indicator (¶) navigates to `TaskDescriptionScreen`. For historical days: everything readonly. Header has `[ edit ]` button.
-- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within each block. Checkboxes are visually muted and non-interactive in edit mode (`touch-action: none` on rows). Header has `[ done ]` button.
+- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within and across blocks. Checkboxes are visually muted and non-interactive in edit mode (`touch-action: none` on rows). Header has `[ done ]` button.
 
-Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a `DndContext` + `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable.
+Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a single shared `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable; `opacity: 0` when `isDragging` (placeholder stays, clone shown via `DragOverlay`).
 
 ### New Day flow
 
@@ -103,20 +103,32 @@ One-off tasks have `task_id: null` in the saved JSONB — they never touch the `
 
 Each hook owns its slice of state and exposes optimistic-update mutations:
 
-- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `reorderBlock`, `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Also exports `canMove` helper. Reset loading/plan on date change.
+- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock`, `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Also exports `canMove` helper. Reset loading/plan on date change. `persistItems` is debounced 300 ms.
 - `useDayPlan` — thin wrapper: `useDayPlanByDate(todayDate())`; re-exports `canMove`
 - `useTasks` — task pool; `createTask`, `updateTask`, `deleteTask`, `createDescription`, `updateDescription`
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
-- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`
+- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock`
 - `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
 
 ### Drag-and-drop
 
-`@dnd-kit/core` + `@dnd-kit/sortable` handle reordering. One `DndContext` per block (three per screen) enforces within-block-only dragging. Pattern used in three places: DayView edit mode (via `SortableTaskRow`), `TemplateEditScreen` (`SortableTmplRow` local component), `NewDayScreen` build-plan step (`SortableDraftRow` local component). All use `PointerSensor` with `activationConstraint: { distance: 8 }`.
+`@dnd-kit/core` + `@dnd-kit/sortable`. All use `PointerSensor` with `activationConstraint: { distance: 8 }`.
 
-`reorderBlock(block, orderedIds)` — accepts the new id order for a block and rebuilds the flat items array (day plans) or swaps positions (template items) before persisting.
+**DayView edit mode + TemplateEditScreen**: single `DndContext` wrapping all blocks. `SortableContext` receives all task IDs in block order (`morning → day → evening`). Cross-block move pattern:
 
-In `TemplateEditScreen`, the entire `.tmpl-item-row` is draggable (no separate drag-grip element). The delete button uses `onPointerDown={e => e.stopPropagation()}` to prevent drag activation.
+1. `onDragStart` → set `draggingId` state (activates `DragOverlay`)
+2. `onDragOver` → if `over` item is in a different block than `dragActiveBlockRef.current`, call `moveCrossBlockLocal` and update the ref synchronously. The ref prevents duplicate calls before React state settles between rapid `onDragOver` events.
+3. `onDragEnd` → same block: `reorderBlock`; different block (fast drag fallback): `moveCrossBlock`. Clear refs.
+
+`DragOverlay` renders a visible clone via portal; the original item is `opacity: 0` while `isDragging`. This prevents visual jumps when the item's DOM node moves between block sections during drag.
+
+- `moveCrossBlockLocal(activeId, overId)` — local state update only, no persist. Inserts active before over item, updates `block` field.
+- `moveCrossBlock(activeId, overId)` — same logic + persists to Supabase.
+- `reorderBlock(block, orderedIds)` — rebuilds flat items array (day plans) or recalculates `position` integers (template items) and persists.
+
+**NewDayScreen** build-plan step still uses one `DndContext` per block (`SortableDraftRow` local component) — cross-block drag not needed in draft mode.
+
+In `TemplateEditScreen`, the entire `.tmpl-item-row` is the drag handle. Delete button uses `onPointerDown={e => e.stopPropagation()}` to prevent drag activation.
 
 ### Optimistic updates pattern
 
