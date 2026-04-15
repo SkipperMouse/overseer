@@ -7,6 +7,26 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      workbox: {
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            handler: 'NetworkOnly',
+          },
+        ],
+      },
       manifest: {
         name: 'Day Tracker',
         short_name: 'Tracker',
@@ -29,4 +49,13 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
+    },
+  },
 })
