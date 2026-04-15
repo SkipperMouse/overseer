@@ -78,6 +78,8 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 **Adding a new top-level screen** requires four changes: new hook + component under `src/components/<name>/`, CSS section in `src/index.css`, import + render in `App.tsx`, and adding the id to `NAV_ITEMS` in `BottomNav.tsx` (also update the `Screen` type there).
 
+`src/components/templates/TemplatesScreen.tsx` and `TemplateListScreen.tsx` are not wired into `App.tsx` — they are dead code (replaced by `TaskPoolScreen` hosting templates inline).
+
 ### DayView component
 
 `src/components/dayview/DayView.tsx` is the universal day display/edit component used by both TodayScreen and HistoryScreen.
@@ -103,8 +105,9 @@ One-off tasks have `task_id: null` in the saved JSONB — they never touch the `
 
 Each hook owns its slice of state and exposes optimistic-update mutations:
 
-- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock`, `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Also exports `canMove` helper. Reset loading/plan on date change. `persistItems` is debounced 300 ms.
-- `useDayPlan` — thin wrapper: `useDayPlanByDate(todayDate())`; re-exports `canMove`
+- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock`, `moveItem` (up/down arrow-key movement, crosses block boundaries), `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Reset loading/plan on date change. `persistItems` is debounced 300 ms.
+- `canMove(items, id, direction)` — standalone named export from `useDayPlanByDate.ts` (not a hook return value); checks whether an item can move up/down given block boundaries.
+- `useDayPlan` — thin wrapper: `useDayPlanByDate(todayDate())`; re-exports `canMove` from the same module.
 - `useTasks` — task pool; `createTask`, `updateTask`, `deleteTask`, `createDescription`, `updateDescription`
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
 - `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock`
@@ -135,6 +138,17 @@ In `TemplateEditScreen`, the entire `.tmpl-item-row` is the drag handle. Delete 
 Every mutation: update local state first → fire Supabase query → revert on error (or replace temp UUID with real one on insert).
 
 Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real row.
+
+## Деплой и кэширование
+
+Проект деплоится на Netlify. Стратегия кэширования:
+
+- `dist/assets/*` — содержат хэш в имени файла (Rollup `[name]-[hash]`), кэшируются 1 год (`immutable`)
+- `index.html`, `sw.js`, `manifest.webmanifest` — `no-cache, no-store` (всегда свежие)
+- Service Worker: `registerType: 'autoUpdate'`, `skipWaiting: true`, `clientsClaim: true`, `cleanupOutdatedCaches: true`
+- Supabase запросы идут `NetworkOnly` через SW — не кэшируются
+
+Конфиги: `vite.config.ts` (build output + PWA workbox), `netlify.toml` (Cache-Control заголовки).
 
 ## Принципы разработки
 

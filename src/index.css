@@ -361,6 +361,14 @@ body {
   padding: 16px 16px 6px;
 }
 
+.section-header-drag {
+  touch-action: none;
+  cursor: grab;
+}
+.section-header-drag:active {
+  cursor: grabbing;
+}
+
 /* ─── Task row layout ────────────────────────────────────────── */
 .task-row {
   display: flex;

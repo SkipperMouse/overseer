@@ -14,6 +14,21 @@ function prevBlock(b: Block): Block | null {
   const i = BLOCKS.indexOf(b); return i > 0 ? BLOCKS[i - 1] : null
 }
 
+/** Вычисляет block для элемента по индексу — ближайший сепаратор сверху. */
+function deriveBlock(items: DayItem[], idx: number): Block {
+  for (let i = idx - 1; i >= 0; i--) {
+    if (items[i].type === 'separator') return items[i].block
+  }
+  return 'morning'
+}
+
+/** Перезаписывает поле block у всех TaskItem по их позиции относительно сепараторов. */
+function normalizeItems(items: DayItem[]): DayItem[] {
+  return items.map((item, idx) =>
+    item.type === 'task' ? { ...item, block: deriveBlock(items, idx) } : item
+  )
+}
+
 export function canMove(items: DayItem[], id: string, direction: 'up' | 'down'): boolean {
   const idx = items.findIndex(i => i.id === id)
   if (idx === -1) return false
@@ -95,57 +110,18 @@ export function useDayPlanByDate(date: string) {
     })
   }, [persistItems])
 
-  const moveCrossBlockLocal = useCallback((activeId: string, overId: string) => {
+  /**
+   * Принимает новый порядок всех id (tasks + separators),
+   * перестраивает массив items и нормализует поля block у задач.
+   */
+  const reorderItems = useCallback((orderedIds: string[]) => {
     setPlan(prev => {
       if (!prev) return prev
-      const items = [...prev.items]
-      const activeIdx = items.findIndex(i => i.id === activeId)
-      const overIdx = items.findIndex(i => i.id === overId)
-      if (activeIdx === -1 || overIdx === -1) return prev
-      const overItem = items[overIdx]
-      if (overItem.type !== 'task') return prev
-      const active = { ...(items[activeIdx] as TaskItem), block: overItem.block }
-      items.splice(activeIdx, 1)
-      const newOverIdx = items.findIndex(i => i.id === overId)
-      items.splice(newOverIdx, 0, active)
-      return { ...prev, items }
-    })
-  }, [])
-
-  const moveCrossBlock = useCallback((activeId: string, overId: string) => {
-    setPlan(prev => {
-      if (!prev) return prev
-      const items = [...prev.items]
-      const activeIdx = items.findIndex(i => i.id === activeId)
-      const overIdx = items.findIndex(i => i.id === overId)
-      if (activeIdx === -1 || overIdx === -1) return prev
-      const active = { ...(items[activeIdx] as TaskItem), block: (items[overIdx] as TaskItem).block }
-      items.splice(activeIdx, 1)
-      const newOverIdx = items.findIndex(i => i.id === overId)
-      items.splice(newOverIdx, 0, active)
-      persistItems(prev.id, items)
-      return { ...prev, items }
-    })
-  }, [persistItems])
-
-  const reorderBlock = useCallback((block: Block, orderedIds: string[]) => {
-    setPlan(prev => {
-      if (!prev) return prev
-      const blockTaskMap = new Map(
-        prev.items
-          .filter((i): i is TaskItem => i.type === 'task' && i.block === block)
-          .map(i => [i.id, i])
-      )
-      const reorderedTasks = orderedIds
-        .map(id => blockTaskMap.get(id))
-        .filter((i): i is TaskItem => !!i)
-        .map((item, idx) => ({ ...item, position: idx }))
-      let taskIdx = 0
-      const newItems = prev.items.map(item =>
-        item.type === 'task' && item.block === block ? reorderedTasks[taskIdx++] : item
-      )
-      persistItems(prev.id, newItems)
-      return { ...prev, items: newItems }
+      const itemMap = new Map(prev.items.map(i => [i.id, i]))
+      const reordered = orderedIds.map(id => itemMap.get(id)).filter((i): i is DayItem => !!i)
+      const normalized = normalizeItems(reordered)
+      persistItems(prev.id, normalized)
+      return { ...prev, items: normalized }
     })
   }, [persistItems])
 
@@ -165,10 +141,8 @@ export function useDayPlanByDate(date: string) {
           .at(-1)
 
         if (prevInBlock !== undefined) {
-          // Свап внутри блока
           ;[items[idx], items[prevInBlock]] = [items[prevInBlock], items[idx]]
         } else {
-          // Перенос в конец предыдущего блока (перед разделителем текущего блока)
           const pb = prevBlock(block)
           if (!pb) return prev
           const curSepIdx = items.findIndex(i => i.type === 'separator' && i.block === block)
@@ -183,10 +157,8 @@ export function useDayPlanByDate(date: string) {
         )
 
         if (nextInBlock !== -1) {
-          // Свап внутри блока
           ;[items[idx], items[nextInBlock]] = [items[nextInBlock], items[idx]]
         } else {
-          // Перенос в начало следующего блока (сразу после его разделителя)
           const nb = nextBlock(block)
           if (!nb) return prev
           const nextSepIdx = items.findIndex(i => i.type === 'separator' && i.block === nb)
@@ -226,7 +198,14 @@ export function useDayPlanByDate(date: string) {
   const addTaskItem = useCallback((task: Task, block: Block) => {
     setPlan(prev => {
       if (!prev) return prev
-      const blockTasks = prev.items.filter(i => i.type === 'task' && i.block === block)
+      const items = [...prev.items]
+      // Найти сепаратор этого блока, затем следующий сепаратор — вставить перед ним (или в конец)
+      const sepIdx = items.findIndex(i => i.type === 'separator' && i.block === block)
+      const nextSepIdx = sepIdx === -1
+        ? -1
+        : items.findIndex((i, idx) => idx > sepIdx && i.type === 'separator')
+      const insertIdx = nextSepIdx === -1 ? items.length : nextSepIdx
+      const blockTasks = items.filter(i => i.type === 'task' && i.block === block)
       const newItem: TaskItem = {
         id: crypto.randomUUID(),
         type: 'task',
@@ -239,15 +218,9 @@ export function useDayPlanByDate(date: string) {
         checked: false,
         position: blockTasks.length,
       }
-      const items = [...prev.items]
-      let insertIdx = items.length
-      for (let i = items.length - 1; i >= 0; i--) {
-        if (items[i].block === block) { insertIdx = i + 1; break }
-      }
       items.splice(insertIdx, 0, newItem)
-      const next = { ...prev, items }
       persistItems(prev.id, items)
-      return next
+      return { ...prev, items }
     })
   }, [persistItems])
 
@@ -259,7 +232,13 @@ export function useDayPlanByDate(date: string) {
   ) => {
     setPlan(prev => {
       if (!prev) return prev
-      const blockTasks = prev.items.filter(i => i.type === 'task' && i.block === block)
+      const items = [...prev.items]
+      const sepIdx = items.findIndex(i => i.type === 'separator' && i.block === block)
+      const nextSepIdx = sepIdx === -1
+        ? -1
+        : items.findIndex((i, idx) => idx > sepIdx && i.type === 'separator')
+      const insertIdx = nextSepIdx === -1 ? items.length : nextSepIdx
+      const blockTasks = items.filter(i => i.type === 'task' && i.block === block)
       const newItem: TaskItem = {
         id: crypto.randomUUID(),
         type: 'task',
@@ -272,15 +251,9 @@ export function useDayPlanByDate(date: string) {
         checked: false,
         position: blockTasks.length,
       }
-      const items = [...prev.items]
-      let insertIdx = items.length
-      for (let i = items.length - 1; i >= 0; i--) {
-        if (items[i].block === block) { insertIdx = i + 1; break }
-      }
       items.splice(insertIdx, 0, newItem)
-      const next = { ...prev, items }
       persistItems(prev.id, items)
-      return next
+      return { ...prev, items }
     })
   }, [persistItems])
 
@@ -290,9 +263,7 @@ export function useDayPlanByDate(date: string) {
     taskDescIds,
     toggleItem,
     moveItem,
-    reorderBlock,
-    moveCrossBlockLocal,
-    moveCrossBlock,
+    reorderItems,
     saveNote,
     removeItem,
     addTaskItem,
