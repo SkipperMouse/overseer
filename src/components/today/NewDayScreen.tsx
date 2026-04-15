@@ -97,7 +97,7 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
         : <span className="task-icon" />
       }
       <span className="task-title">{item.title}</span>
-      {item.duration && <span className="task-duration">{item.duration}</span>}
+      {item.duration && <span className="task-duration">{item.duration}m</span>}
       {item.taskId === null && <span className="nd-onetime-badge">разовая</span>}
       <button className="pool-del-btn" onClick={() => onDelete()}>×</button>
     </div>
@@ -404,7 +404,7 @@ export default function NewDayScreen({ onDone }: Props) {
                 : <span className="task-icon" />
               }
               <span className="nd-pool-title">{task.title}</span>
-              {task.duration && <span className="task-duration">{task.duration}</span>}
+              {task.duration && <span className="task-duration">{task.duration}m</span>}
               <span className="nd-pool-plus">+</span>
             </button>
           ))}

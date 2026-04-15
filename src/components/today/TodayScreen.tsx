@@ -5,9 +5,11 @@ function todayDate() {
 }
 
 interface Props {
-  onNewDay: () => void
+  onNewDay?: () => void
+  date?: string
+  onBack?: () => void
 }
 
-export default function TodayScreen({ onNewDay }: Props) {
-  return <DayView date={todayDate()} onNewDay={onNewDay} />
+export default function TodayScreen({ onNewDay, date, onBack }: Props) {
+  return <DayView date={date ?? todayDate()} onNewDay={onNewDay} onBack={onBack} />
 }

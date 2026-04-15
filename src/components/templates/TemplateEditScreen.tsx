@@ -67,7 +67,7 @@ function TaskPicker({ tasks, onSelect, onClose }: TaskPickerProps) {
               {task.icon && <span className="task-icon pip-emoji">{task.icon}</span>}
               <span className="tmpl-picker-title">{task.title}</span>
               {task.duration && (
-                <span className="task-duration">{task.duration}</span>
+                <span className="task-duration">{task.duration}m</span>
               )}
             </button>
           ))}
@@ -116,15 +116,9 @@ function SortableTmplRow({ item, onDelete }: { item: TemplateItem; onDelete: () 
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`tmpl-item-row${isDragging ? ' dragging' : ''}`}
+      {...attributes}
+      {...listeners}
     >
-      <span
-        className="drag-grip"
-        {...attributes}
-        {...listeners}
-        onClick={e => e.stopPropagation()}
-      >
-        ⠿
-      </span>
       {item.type === 'separator' ? (
         <span className="tmpl-item-sep-label text-muted">
           — {item.separator_label}
@@ -136,13 +130,14 @@ function SortableTmplRow({ item, onDelete }: { item: TemplateItem; onDelete: () 
           )}
           <span className="tmpl-item-title">{item.task?.title ?? '?'}</span>
           {item.task?.duration && (
-            <span className="task-duration">{item.task.duration}</span>
+            <span className="task-duration">{item.task.duration}m</span>
           )}
         </>
       )}
       <button
         className="pool-del-btn"
-        onClick={() => onDelete()}
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        onPointerDown={e => e.stopPropagation()}
       >
         ×
       </button>

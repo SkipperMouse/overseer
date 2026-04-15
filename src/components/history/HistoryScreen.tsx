@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useHistory } from '../../hooks/useHistory'
-import DayView from '../dayview/DayView'
+import TodayScreen from '../today/TodayScreen'
 import type { DayPlan, TaskItem } from '../../types'
 
 function formatDate(dateStr: string): string {
@@ -20,7 +20,7 @@ export default function HistoryScreen() {
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
   if (viewingDate) {
-    return <DayView date={viewingDate} onBack={() => setViewingDate(null)} />
+    return <TodayScreen date={viewingDate} onBack={() => setViewingDate(null)} />
   }
 
   if (loading) {
