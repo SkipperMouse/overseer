@@ -90,6 +90,39 @@ export function useDayPlanByDate(date: string) {
     })
   }, [persistItems])
 
+  const moveCrossBlockLocal = useCallback((activeId: string, overId: string) => {
+    setPlan(prev => {
+      if (!prev) return prev
+      const items = [...prev.items]
+      const activeIdx = items.findIndex(i => i.id === activeId)
+      const overIdx = items.findIndex(i => i.id === overId)
+      if (activeIdx === -1 || overIdx === -1) return prev
+      const overItem = items[overIdx]
+      if (overItem.type !== 'task') return prev
+      const active = { ...(items[activeIdx] as TaskItem), block: overItem.block }
+      items.splice(activeIdx, 1)
+      const newOverIdx = items.findIndex(i => i.id === overId)
+      items.splice(newOverIdx, 0, active)
+      return { ...prev, items }
+    })
+  }, [])
+
+  const moveCrossBlock = useCallback((activeId: string, overId: string) => {
+    setPlan(prev => {
+      if (!prev) return prev
+      const items = [...prev.items]
+      const activeIdx = items.findIndex(i => i.id === activeId)
+      const overIdx = items.findIndex(i => i.id === overId)
+      if (activeIdx === -1 || overIdx === -1) return prev
+      const active = { ...(items[activeIdx] as TaskItem), block: (items[overIdx] as TaskItem).block }
+      items.splice(activeIdx, 1)
+      const newOverIdx = items.findIndex(i => i.id === overId)
+      items.splice(newOverIdx, 0, active)
+      persistItems(prev.id, items)
+      return { ...prev, items }
+    })
+  }, [persistItems])
+
   const reorderBlock = useCallback((block: Block, orderedIds: string[]) => {
     setPlan(prev => {
       if (!prev) return prev
@@ -253,6 +286,8 @@ export function useDayPlanByDate(date: string) {
     toggleItem,
     moveItem,
     reorderBlock,
+    moveCrossBlockLocal,
+    moveCrossBlock,
     saveNote,
     removeItem,
     addTaskItem,

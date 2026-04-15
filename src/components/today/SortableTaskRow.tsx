@@ -17,7 +17,7 @@ export default function SortableTaskRow({ item, hasDesc, onToggle, onDelete, onD
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
     >
       <TaskRow
         item={item}

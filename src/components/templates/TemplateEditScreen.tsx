@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
+import { useState, useRef } from 'react'
+import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { DragEndEvent } from '@dnd-kit/core'
+import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { useTemplateItems } from '../../hooks/useTemplates'
 import type { Template, TemplateItem, Block, Task } from '../../types'
 
@@ -114,7 +114,7 @@ function SortableTmplRow({ item, onDelete }: { item: TemplateItem; onDelete: () 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
       className={`tmpl-item-row${isDragging ? ' dragging' : ''}`}
       {...attributes}
       {...listeners}
@@ -153,19 +153,13 @@ interface BlockSectionProps {
   onAddTask: (block: Block, taskId: string) => void
   onAddSeparator: (block: Block, label: string) => void
   onDelete: (id: string) => void
-  onReorder: (block: Block, orderedIds: string[]) => void
 }
 
 function BlockSection({
-  blockKey, label, items, tasks, onAddTask, onAddSeparator, onDelete, onReorder,
+  blockKey, label, items, tasks, onAddTask, onAddSeparator, onDelete,
 }: BlockSectionProps) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [sepInputOpen, setSepInputOpen] = useState(false)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
 
   const blockItems = items
     .filter(i => i.block === blockKey)
@@ -176,14 +170,6 @@ function BlockSection({
   )
   const availableTasks = tasks.filter(t => !addedTaskIds.has(t.id))
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIdx = blockItems.findIndex(i => i.id === active.id)
-    const newIdx = blockItems.findIndex(i => i.id === over.id)
-    onReorder(blockKey, arrayMove(blockItems, oldIdx, newIdx).map(i => i.id))
-  }
-
   return (
     <div className="tmpl-block">
       <div className="section-header">
@@ -191,21 +177,13 @@ function BlockSection({
       </div>
 
       <div className="tmpl-block-items">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={blockItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
-            {blockItems.map(item => (
-              <SortableTmplRow
-                key={item.id}
-                item={item}
-                onDelete={() => onDelete(item.id)}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
+        {blockItems.map(item => (
+          <SortableTmplRow
+            key={item.id}
+            item={item}
+            onDelete={() => onDelete(item.id)}
+          />
+        ))}
       </div>
 
       {sepInputOpen && (
@@ -242,8 +220,62 @@ function BlockSection({
 }
 
 export default function TemplateEditScreen({ template, onBack }: Props) {
-  const { items, tasks, loading, addTaskItem, addSeparator, deleteItem, reorderBlock } =
+  const { items, tasks, loading, addTaskItem, addSeparator, deleteItem, reorderBlock, moveCrossBlockLocal, moveCrossBlock } =
     useTemplateItems(template.id)
+
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const dragActiveIdRef = useRef<string | null>(null)
+  const dragActiveBlockRef = useRef<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const allSortedIds = BLOCKS.flatMap(({ key }) =>
+    items.filter(i => i.block === key).sort((a, b) => a.position - b.position).map(i => i.id)
+  )
+
+  function handleDragStart(event: DragStartEvent) {
+    setDraggingId(String(event.active.id))
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    if (dragActiveIdRef.current !== activeId) {
+      dragActiveIdRef.current = activeId
+      const item = items.find(i => i.id === activeId)
+      dragActiveBlockRef.current = item?.block ?? null
+    }
+    const overItem = items.find(i => i.id === overId)
+    if (!overItem || dragActiveBlockRef.current === overItem.block) return
+    dragActiveBlockRef.current = overItem.block
+    moveCrossBlockLocal(activeId, overId)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingId(null)
+    dragActiveIdRef.current = null
+    dragActiveBlockRef.current = null
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    const activeItem = items.find(i => i.id === activeId)
+    const overItem = items.find(i => i.id === overId)
+    if (!activeItem || !overItem) return
+    if (activeItem.block === overItem.block) {
+      const blockItems = items.filter(i => i.block === activeItem.block).sort((a, b) => a.position - b.position)
+      const oldIdx = blockItems.findIndex(i => i.id === activeId)
+      const newIdx = blockItems.findIndex(i => i.id === overId)
+      reorderBlock(activeItem.block, arrayMove(blockItems, oldIdx, newIdx).map(i => i.id))
+    } else {
+      moveCrossBlock(activeId, overId)
+    }
+  }
 
   return (
     <div className="tmpl-screen">
@@ -259,19 +291,48 @@ export default function TemplateEditScreen({ template, onBack }: Props) {
             <span className="blink-cursor" />
           </div>
         ) : (
-          BLOCKS.map(({ key, label }) => (
-            <BlockSection
-              key={key}
-              blockKey={key}
-              label={label}
-              items={items}
-              tasks={tasks}
-              onAddTask={addTaskItem}
-              onAddSeparator={addSeparator}
-              onDelete={deleteItem}
-              onReorder={reorderBlock}
-            />
-          ))
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={allSortedIds} strategy={verticalListSortingStrategy}>
+              {BLOCKS.map(({ key, label }) => (
+                <BlockSection
+                  key={key}
+                  blockKey={key}
+                  label={label}
+                  items={items}
+                  tasks={tasks}
+                  onAddTask={addTaskItem}
+                  onAddSeparator={addSeparator}
+                  onDelete={deleteItem}
+                />
+              ))}
+            </SortableContext>
+            <DragOverlay dropAnimation={null}>
+              {(() => {
+                if (!draggingId) return null
+                const item = items.find(i => i.id === draggingId)
+                if (!item) return null
+                return (
+                  <div className="tmpl-item-row">
+                    {item.type === 'separator' ? (
+                      <span className="tmpl-item-sep-label text-muted">— {item.separator_label}</span>
+                    ) : (
+                      <>
+                        {item.task?.icon && <span className="task-icon pip-emoji">{item.task.icon}</span>}
+                        <span className="tmpl-item-title">{item.task?.title ?? '?'}</span>
+                        {item.task?.duration && <span className="task-duration">{item.task.duration}m</span>}
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
     </div>
