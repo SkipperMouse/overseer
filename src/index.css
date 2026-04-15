@@ -139,6 +139,7 @@ body {
 .task-row.edit-mode {
   cursor: grab;
   user-select: none;
+  touch-action: none;
 }
 
 .task-row.edit-mode:active {
@@ -152,7 +153,14 @@ body {
   pointer-events: none;
 }
 
-.task-row.edit-mode .checkbox,
+.task-row.edit-mode .task-check-area {
+  pointer-events: none;
+}
+
+.task-row.edit-mode .checkbox {
+  opacity: 0.35;
+}
+
 .task-row.edit-mode .pool-del-btn {
   pointer-events: auto;
 }
@@ -361,6 +369,14 @@ body {
   padding: 7px 16px;
   border-bottom: 1px solid var(--border-dim);
   background: transparent;
+  cursor: default;
+}
+
+.task-check-area {
+  display: flex;
+  align-items: center;
+  min-width: 32px;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -429,6 +445,20 @@ body {
   gap: 6px;
 }
 
+.note-input-wrap {
+  position: relative;
+}
+
+.note-blink-cursor {
+  position: absolute;
+  top: 9px;
+  left: 11px;
+  pointer-events: none;
+  z-index: 1;
+  width: 7px;
+  height: 13px;
+}
+
 .note-input {
   width: 100%;
   background: var(--bg-surface);
@@ -445,9 +475,6 @@ body {
   transition: border-color 0.15s;
 }
 
-.note-input::placeholder {
-  color: var(--text-dim);
-}
 
 .note-input:focus {
   border-color: var(--border-bright);
@@ -497,6 +524,42 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.pool-search-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.pool-search {
+  flex: 1;
+}
+
+.pool-search-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.pool-search-clear:hover {
+  color: var(--accent);
+}
+
+.pool-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px 6px;
+  border-bottom: 1px solid var(--border-dim);
 }
 
 .pool-header {
@@ -782,6 +845,69 @@ body {
   background: var(--bg-hover);
 }
 
+.emoji-custom-row {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border-dim);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.emoji-confirm-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-section);
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 2px 0;
+}
+
+.emoji-confirm-btn:hover {
+  color: var(--accent);
+  text-shadow: var(--accent-glow-sm);
+}
+
+.emoji-custom-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  border: 1px solid var(--border-bright);
+}
+
+.emoji-custom-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--accent-glow-sm);
+}
+
+.emoji-custom-cursor {
+  pointer-events: none;
+  width: 10px;
+  height: 18px;
+}
+
+.emoji-custom-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  font-size: 18px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-family: inherit;
+  outline: none;
+  padding: 0;
+}
+
 /* ─── Templates screen ─────────────────────────────────────────── */
 .tmpl-screen {
   flex: 1;
@@ -880,6 +1006,11 @@ body {
   gap: 6px;
   padding: 5px 0;
   border-bottom: 1px solid var(--border-dim);
+  cursor: grab;
+}
+
+.tmpl-item-row:active {
+  cursor: grabbing;
 }
 
 .tmpl-item-title {
@@ -1013,6 +1144,11 @@ body {
   font-size: 10px;
   color: var(--text-muted);
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.task-desc-indicator:hover {
+  color: var(--accent);
 }
 
 /* ─── Description screen ───────────────────────────────────────── */

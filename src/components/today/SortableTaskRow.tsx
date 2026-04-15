@@ -8,9 +8,10 @@ interface Props {
   hasDesc: boolean
   onToggle: () => void
   onDelete: () => void
+  onDescClick?: () => void
 }
 
-export default function SortableTaskRow({ item, hasDesc, onToggle, onDelete }: Props) {
+export default function SortableTaskRow({ item, hasDesc, onToggle, onDelete, onDescClick }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
 
   return (
@@ -26,6 +27,7 @@ export default function SortableTaskRow({ item, hasDesc, onToggle, onDelete }: P
         dragProps={{ attributes, listeners }}
         onToggle={onToggle}
         onDelete={onDelete}
+        onDescClick={onDescClick}
       />
     </div>
   )

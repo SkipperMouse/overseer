@@ -2,12 +2,11 @@ import { useState } from 'react'
 import TodayScreen from './components/today/TodayScreen'
 import NewDayScreen from './components/today/NewDayScreen'
 import TaskPoolScreen from './components/tasks/TaskPoolScreen'
-import TemplatesScreen from './components/templates/TemplatesScreen'
 import HistoryScreen from './components/history/HistoryScreen'
 import BottomNav from './components/ui/BottomNav'
 import './index.css'
 
-type Screen = 'today' | 'new-day' | 'templates' | 'pool' | 'history'
+type Screen = 'today' | 'new-day' | 'pool' | 'history'
 
 function App() {
   const [screen, setScreen] = useState<Screen>('today')
@@ -18,9 +17,8 @@ function App() {
         {screen === 'today' && <TodayScreen onNewDay={() => setScreen('new-day')} />}
         {screen === 'new-day' && <NewDayScreen onDone={() => setScreen('today')} />}
         {screen === 'pool' && <TaskPoolScreen />}
-        {screen === 'templates' && <TemplatesScreen />}
         {screen === 'history' && <HistoryScreen />}
-        {screen !== 'new-day' && <BottomNav active={screen} onNavigate={setScreen} />}
+        {screen !== 'new-day' && <BottomNav active={screen as 'today' | 'pool' | 'history'} onNavigate={setScreen} />}
       </div>
     </div>
   )

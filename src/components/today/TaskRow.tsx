@@ -12,26 +12,31 @@ interface Props {
   }
   onToggle: () => void
   onDelete?: () => void
+  onDescClick?: () => void
 }
 
 export default function TaskRow({
-  item, hasDesc, editMode, isDragging, dragProps, onToggle, onDelete,
+  item, hasDesc, editMode, isDragging, dragProps, onToggle, onDelete, onDescClick,
 }: Props) {
   return (
     <div
       className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
-      onClick={editMode ? undefined : onToggle}
       {...(editMode && dragProps ? dragProps.attributes : {})}
       {...(editMode && dragProps ? dragProps.listeners : {})}
     >
-      <input
-        type="checkbox"
-        className="checkbox"
-        checked={item.checked}
-        onChange={onToggle}
-        onClick={e => e.stopPropagation()}
-        onPointerDown={e => e.stopPropagation()}
-      />
+      <div
+        className="task-check-area"
+        onClick={e => { e.stopPropagation(); if (!editMode) onToggle() }}
+      >
+        <input
+          type="checkbox"
+          className="checkbox"
+          checked={item.checked}
+          onChange={editMode ? () => {} : onToggle}
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+        />
+      </div>
 
       {item.icon && (
         <span className="task-icon pip-emoji">{item.icon}</span>
@@ -40,11 +45,14 @@ export default function TaskRow({
       <span className="task-title">{item.title}</span>
 
       {item.duration && (
-        <span className="task-duration">{item.duration}</span>
+        <span className="task-duration">{item.duration}m</span>
       )}
 
       {item.task_id && hasDesc && (
-        <span className="task-desc-indicator">¶</span>
+        <span
+          className="task-desc-indicator"
+          onClick={e => { e.stopPropagation(); onDescClick?.() }}
+        >¶</span>
       )}
 
       {onDelete && (
