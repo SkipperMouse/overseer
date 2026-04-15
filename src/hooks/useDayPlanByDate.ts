@@ -32,6 +32,8 @@ export function useDayPlanByDate(date: string) {
   const [taskDescIds, setTaskDescIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
+    let cancelled = false
+
     async function load() {
       setLoading(true)
       setPlan(null)
@@ -42,6 +44,7 @@ export function useDayPlanByDate(date: string) {
         .select('*')
         .eq('date', date)
         .maybeSingle()
+      if (cancelled) return
       if (error) console.error(error)
       const planData = (data as DayPlan) ?? null
       setPlan(planData)
@@ -55,12 +58,14 @@ export function useDayPlanByDate(date: string) {
             .from('task_descriptions')
             .select('task_id')
             .in('task_id', taskIds)
+          if (cancelled) return
           setTaskDescIds(new Set(((descs ?? []) as RawDescRow[]).map(d => d.task_id)))
         }
       }
-      setLoading(false)
+      if (!cancelled) setLoading(false)
     }
     load()
+    return () => { cancelled = true }
   }, [date])
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
