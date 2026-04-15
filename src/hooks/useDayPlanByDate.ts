@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { DayPlan, DayItem, TaskItem, Task, Block } from '../types'
 
@@ -63,9 +63,17 @@ export function useDayPlanByDate(date: string) {
     load()
   }, [date])
 
-  const persistItems = useCallback(async (planId: string, items: DayItem[]) => {
-    const { error } = await supabase.from('day_plans').update({ items }).eq('id', planId)
-    if (error) console.error(error)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const persistItems = useCallback((planId: string, items: DayItem[]) => {
+    if (debounceRef.current !== null) {
+      clearTimeout(debounceRef.current)
+    }
+    debounceRef.current = setTimeout(async () => {
+      debounceRef.current = null
+      const { error } = await supabase.from('day_plans').update({ items }).eq('id', planId)
+      if (error) console.error(error)
+    }, 300)
   }, [])
 
   const toggleItem = useCallback((id: string) => {
