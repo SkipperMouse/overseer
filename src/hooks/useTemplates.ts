@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Template, TemplateItem, Task, Block } from '../types'
 
@@ -192,10 +192,6 @@ export function useTemplateItems(templateId: string) {
     const { error } = await supabase.from('template_items').delete().eq('id', id)
     if (error) console.error(error)
   }, [])
-
-  // Ref to always access latest items inside async callbacks
-  const itemsRef = useRef(items)
-  itemsRef.current = items
 
   const moveCrossBlockLocal = useCallback((activeId: string, overId: string) => {
     setItems(prev => {
