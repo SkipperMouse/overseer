@@ -139,7 +139,6 @@ body {
 .task-row.edit-mode {
   cursor: grab;
   user-select: none;
-  touch-action: none;
 }
 
 .task-row.edit-mode:active {
@@ -362,7 +361,6 @@ body {
 }
 
 .section-header-drag {
-  touch-action: none;
   cursor: grab;
 }
 .section-header-drag:active {
