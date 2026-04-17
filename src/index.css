@@ -143,7 +143,7 @@ body {
 
 .drag-handle {
   flex-shrink: 0;
-  width: 24px;
+  width: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -152,7 +152,6 @@ body {
   cursor: grab;
   touch-action: none;
   user-select: none;
-  padding: 0 2px;
 }
 
 .drag-handle:active {

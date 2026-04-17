@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import type { Template, Task, Block } from '../../types'
 import SectionHeader from './SectionHeader'
 import EmojiPicker from '../tasks/EmojiPicker'
+import { useIsTouchDevice } from '../../hooks/useIsTouchDevice'
 
 function todayDate() {
   return new Date().toLocaleDateString('en-CA')
@@ -78,18 +79,22 @@ type Step = 'loading' | 'exists' | 'pick-template' | 'build-plan'
 
 function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  const isTouch = useIsTouchDevice()
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`task-row${isDragging ? ' dragging' : ''}`}
+      {...attributes}
+      {...(!isTouch ? listeners : {})}
     >
-      <div
-        className="drag-handle"
-        {...attributes}
-        {...listeners}
-        onClick={e => e.stopPropagation()}
-      >⠿</div>
+      {isTouch && (
+        <div
+          className="drag-handle"
+          {...listeners}
+          onClick={e => e.stopPropagation()}
+        >⠿</div>
+      )}
       {item.icon
         ? <span className="task-icon pip-emoji">{item.icon}</span>
         : <span className="task-icon" />

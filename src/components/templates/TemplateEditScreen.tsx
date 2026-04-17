@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { useTemplateItems } from '../../hooks/useTemplates'
 import type { Template, TemplateItem, Block, Task } from '../../types'
+import { useIsTouchDevice } from '../../hooks/useIsTouchDevice'
 
 interface Props {
   template: Template
@@ -111,14 +112,18 @@ function SepInput({ onConfirm, onCancel }: SepInputProps) {
 
 function SortableTmplRow({ item, onDelete }: { item: TemplateItem; onDelete: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+  const isTouch = useIsTouchDevice()
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
       className={`tmpl-item-row${isDragging ? ' dragging' : ''}`}
       {...attributes}
+      {...(!isTouch ? listeners : {})}
     >
-      <div className="drag-handle" {...listeners}>⠿</div>
+      {isTouch && (
+        <div className="drag-handle" {...listeners}>⠿</div>
+      )}
       {item.type === 'separator' ? (
         <span className="tmpl-item-sep-label text-muted">
           — {item.separator_label}

@@ -1,5 +1,6 @@
 import type { DraggableAttributes } from '@dnd-kit/core'
 import type { TaskItem } from '../../types'
+import { useIsTouchDevice } from '../../hooks/useIsTouchDevice'
 
 interface Props {
   item: TaskItem
@@ -18,12 +19,15 @@ interface Props {
 export default function TaskRow({
   item, hasDesc, editMode, isDragging, dragProps, onToggle, onDelete, onDescClick,
 }: Props) {
+  const isTouch = useIsTouchDevice()
+
   return (
     <div
       className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
       {...(editMode && dragProps ? dragProps.attributes : {})}
+      {...(editMode && dragProps && !isTouch ? dragProps.listeners : {})}
     >
-      {editMode && dragProps && (
+      {editMode && dragProps && isTouch && (
         <div className="drag-handle" {...dragProps.listeners}>⠿</div>
       )}
       <div
