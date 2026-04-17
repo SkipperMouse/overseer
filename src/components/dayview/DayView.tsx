@@ -119,7 +119,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 10 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 10 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
@@ -323,7 +323,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
             <DragOverlay dropAnimation={null}>
               {draggingItem && draggingItem.type === 'task' && (
                 <div className={`task-row edit-mode${(draggingItem as TaskItem).checked ? ' done' : ''}`}>
-                  <div className="task-check-area">
+                  <div className="task-check-area" onPointerDown={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       className="checkbox"
@@ -331,6 +331,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                       onChange={() => {}}
                     />
                   </div>
+                  <span className="drag-handle">⠿</span>
                   {(draggingItem as TaskItem).icon && (
                     <span className="task-icon pip-emoji">{(draggingItem as TaskItem).icon}</span>
                   )}

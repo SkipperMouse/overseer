@@ -83,9 +83,8 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`task-row${isDragging ? ' dragging' : ''}`}
-      {...attributes}
-      {...listeners}
     >
+      <span className="drag-handle" {...attributes} {...listeners}>⠿</span>
       {item.icon
         ? <span className="task-icon pip-emoji">{item.icon}</span>
         : <span className="task-icon" />
@@ -93,7 +92,7 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
       <span className="task-title">{item.title}</span>
       {item.duration && <span className="task-duration">{item.duration}m</span>}
       {item.taskId === null && <span className="nd-onetime-badge">разовая</span>}
-      <button className="pool-del-btn" onClick={() => onDelete()}>×</button>
+      <button className="pool-del-btn" onClick={() => onDelete()} onPointerDown={e => e.stopPropagation()}>×</button>
     </div>
   )
 }
@@ -116,7 +115,7 @@ export default function NewDayScreen({ onDone }: Props) {
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 10 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 10 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 

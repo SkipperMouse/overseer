@@ -136,21 +136,21 @@ body {
 }
 
 /* ─── Edit-mode drag zone ───────────────────────────────────────── */
-.task-row.edit-mode {
-  user-select: none;
+.drag-handle {
+  touch-action: none;
   cursor: grab;
+  color: var(--text-dim);
+  padding: 2px 8px 2px 4px;
+  flex-shrink: 0;
+  font-size: 14px;
+  user-select: none;
 }
-
-.task-row.edit-mode:active {
+.drag-handle:active {
   cursor: grabbing;
 }
 
-.task-row.edit-mode > * {
-  pointer-events: none;
-}
-
-.task-row.edit-mode .checkbox {
-  opacity: 0.35;
+.task-row.edit-mode .task-check-area {
+  pointer-events: auto;
 }
 
 .task-row.edit-mode .pool-del-btn {

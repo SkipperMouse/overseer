@@ -16,10 +16,11 @@ export default function SortableTaskRow({ item, hasDesc, onDelete }: Props) {
       ref={setNodeRef}
       className={`task-row edit-mode${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}`}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
-      {...attributes}
-      {...listeners}
     >
-      <div className="task-check-area">
+      <div
+        className="task-check-area"
+        onPointerDown={e => e.stopPropagation()}
+      >
         <input
           type="checkbox"
           className="checkbox"
@@ -27,6 +28,15 @@ export default function SortableTaskRow({ item, hasDesc, onDelete }: Props) {
           onChange={() => {}}
         />
       </div>
+
+      <span
+        className="drag-handle"
+        {...attributes}
+        {...listeners}
+        aria-label="перетащить задачу"
+      >
+        ⠿
+      </span>
 
       {item.icon && (
         <span className="task-icon pip-emoji">{item.icon}</span>
