@@ -294,9 +294,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                     key={taskItem.id}
                     item={taskItem}
                     hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
-                    onToggle={() => toggleItem(taskItem.id)}
                     onDelete={() => removeItem(taskItem.id)}
-                    onDescClick={() => handleDescClick(taskItem)}
                   />
                 )
               })}
@@ -304,12 +302,23 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
             <DragOverlay dropAnimation={null}>
               {draggingItem && draggingItem.type === 'task' && (
-                <TaskRow
-                  item={draggingItem as TaskItem}
-                  hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
-                  editMode={true}
-                  onToggle={() => {}}
-                />
+                <div className={`task-row edit-mode${(draggingItem as TaskItem).checked ? ' done' : ''}`}>
+                  <div className="task-check-area">
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={(draggingItem as TaskItem).checked}
+                      onChange={() => {}}
+                    />
+                  </div>
+                  {(draggingItem as TaskItem).icon && (
+                    <span className="task-icon pip-emoji">{(draggingItem as TaskItem).icon}</span>
+                  )}
+                  <span className="task-title">{(draggingItem as TaskItem).title}</span>
+                  {(draggingItem as TaskItem).duration && (
+                    <span className="task-duration">{(draggingItem as TaskItem).duration}m</span>
+                  )}
+                </div>
               )}
               {draggingItem && draggingItem.type === 'separator' && (
                 <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />

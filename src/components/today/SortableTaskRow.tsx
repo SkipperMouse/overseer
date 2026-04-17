@@ -1,31 +1,53 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import TaskRow from './TaskRow'
 import type { TaskItem } from '../../types'
 
 interface Props {
   item: TaskItem
   hasDesc: boolean
-  onToggle: () => void
   onDelete: () => void
-  onDescClick?: () => void
 }
 
-export default function SortableTaskRow({ item, hasDesc, onToggle, onDelete, onDescClick }: Props) {
+export default function SortableTaskRow({ item, hasDesc, onDelete }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
 
   return (
-    <TaskRow
-      item={item}
-      hasDesc={hasDesc}
-      editMode={true}
-      isDragging={isDragging}
-      dragProps={{ attributes, listeners }}
-      wrapperRef={setNodeRef}
-      wrapperStyle={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
-      onToggle={onToggle}
-      onDelete={onDelete}
-      onDescClick={onDescClick}
-    />
+    <div
+      ref={setNodeRef}
+      className={`task-row edit-mode${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
+      {...attributes}
+      {...listeners}
+    >
+      <div className="task-check-area">
+        <input
+          type="checkbox"
+          className="checkbox"
+          checked={item.checked}
+          onChange={() => {}}
+        />
+      </div>
+
+      {item.icon && (
+        <span className="task-icon pip-emoji">{item.icon}</span>
+      )}
+
+      <span className="task-title">{item.title}</span>
+
+      {item.duration && (
+        <span className="task-duration">{item.duration}m</span>
+      )}
+
+      {item.task_id && hasDesc && (
+        <span className="task-desc-indicator">¶</span>
+      )}
+
+      <button
+        className="pool-del-btn"
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        onPointerDown={e => e.stopPropagation()}
+        aria-label="удалить задачу"
+      >×</button>
+    </div>
   )
 }

@@ -145,14 +145,7 @@ body {
   cursor: grabbing;
 }
 
-.task-row.edit-mode .task-title,
-.task-row.edit-mode .task-icon,
-.task-row.edit-mode .task-duration,
-.task-row.edit-mode .task-desc-indicator {
-  pointer-events: none;
-}
-
-.task-row.edit-mode .task-check-area {
+.task-row.edit-mode > * {
   pointer-events: none;
 }
 

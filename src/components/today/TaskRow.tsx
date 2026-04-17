@@ -1,46 +1,25 @@
-import type { DraggableAttributes } from '@dnd-kit/core'
 import type { TaskItem } from '../../types'
 
 interface Props {
   item: TaskItem
   hasDesc?: boolean
-  editMode?: boolean
-  isDragging?: boolean
-  dragProps?: {
-    attributes: DraggableAttributes
-    listeners: Record<string, unknown> | undefined
-  }
-  wrapperRef?: (node: HTMLDivElement | null) => void
-  wrapperStyle?: React.CSSProperties
   onToggle: () => void
-  onDelete?: () => void
   onDescClick?: () => void
 }
 
-export default function TaskRow({
-  item, hasDesc, editMode, isDragging, dragProps,
-  wrapperRef, wrapperStyle,
-  onToggle, onDelete, onDescClick,
-}: Props) {
+export default function TaskRow({ item, hasDesc, onToggle, onDescClick }: Props) {
   return (
-    <div
-      ref={wrapperRef}
-      className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
-      style={wrapperStyle}
-      {...(editMode && dragProps ? dragProps.attributes : {})}
-      {...(editMode && dragProps ? dragProps.listeners : {})}
-    >
+    <div className={`task-row${item.checked ? ' done' : ''}`}>
       <div
         className="task-check-area"
-        onClick={e => { e.stopPropagation(); if (!editMode) onToggle() }}
+        onClick={e => { e.stopPropagation(); onToggle() }}
       >
         <input
           type="checkbox"
           className="checkbox"
           checked={item.checked}
-          onChange={editMode ? () => {} : onToggle}
+          onChange={onToggle}
           onClick={e => e.stopPropagation()}
-          onPointerDown={e => e.stopPropagation()}
         />
       </div>
 
@@ -59,15 +38,6 @@ export default function TaskRow({
           className="task-desc-indicator"
           onClick={e => { e.stopPropagation(); onDescClick?.() }}
         >¶</span>
-      )}
-
-      {onDelete && (
-        <button
-          className="pool-del-btn"
-          onClick={e => { e.stopPropagation(); onDelete() }}
-          onPointerDown={e => e.stopPropagation()}
-          aria-label="удалить задачу"
-        >×</button>
       )}
     </div>
   )
