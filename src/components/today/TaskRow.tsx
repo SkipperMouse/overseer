@@ -11,19 +11,25 @@ interface Props {
     attributes: DraggableAttributes
     listeners: Record<string, unknown> | undefined
   }
+  wrapperRef?: (node: HTMLDivElement | null) => void
+  wrapperStyle?: React.CSSProperties
   onToggle: () => void
   onDelete?: () => void
   onDescClick?: () => void
 }
 
 export default function TaskRow({
-  item, hasDesc, editMode, isDragging, dragProps, onToggle, onDelete, onDescClick,
+  item, hasDesc, editMode, isDragging, dragProps,
+  wrapperRef, wrapperStyle,
+  onToggle, onDelete, onDescClick,
 }: Props) {
   const isTouch = useIsTouchDevice()
 
   return (
     <div
+      ref={wrapperRef}
       className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
+      style={wrapperStyle}
       {...(editMode && dragProps ? dragProps.attributes : {})}
       {...(editMode && dragProps && !isTouch ? dragProps.listeners : {})}
     >

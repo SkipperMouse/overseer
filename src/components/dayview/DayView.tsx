@@ -272,27 +272,25 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       </header>
 
       <div className="today-content">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={plan.items.map(i => i.id)}
-            strategy={verticalListSortingStrategy}
+        {mode === 'edit' ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
           >
-            {plan.items.map(item => {
-              if (item.type === 'separator') {
-                const sep = item as SeparatorItem
-                const label = sep.label || BLOCK_LABELS[sep.block]
-                return mode === 'edit'
-                  ? <SortableSeparator key={sep.id} id={sep.id} label={label} draggable={true} />
-                  : <SectionHeader key={sep.id} label={label} />
-              }
-              const taskItem = item as TaskItem
-              return mode === 'edit'
-                ? (
+            <SortableContext
+              items={plan.items.map(i => i.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {plan.items.map(item => {
+                if (item.type === 'separator') {
+                  const sep = item as SeparatorItem
+                  const label = sep.label || BLOCK_LABELS[sep.block]
+                  return <SortableSeparator key={sep.id} id={sep.id} label={label} draggable={true} />
+                }
+                const taskItem = item as TaskItem
+                return (
                   <SortableTaskRow
                     key={taskItem.id}
                     item={taskItem}
@@ -302,32 +300,42 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                     onDescClick={() => handleDescClick(taskItem)}
                   />
                 )
-                : (
-                  <TaskRow
-                    key={taskItem.id}
-                    item={taskItem}
-                    hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
-                    onToggle={() => toggleItem(taskItem.id)}
-                    onDescClick={() => handleDescClick(taskItem)}
-                  />
-                )
-            })}
-          </SortableContext>
+              })}
+            </SortableContext>
 
-          <DragOverlay dropAnimation={null}>
-            {draggingItem && draggingItem.type === 'task' && (
+            <DragOverlay dropAnimation={null}>
+              {draggingItem && draggingItem.type === 'task' && (
+                <TaskRow
+                  item={draggingItem as TaskItem}
+                  hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
+                  editMode={true}
+                  onToggle={() => {}}
+                />
+              )}
+              {draggingItem && draggingItem.type === 'separator' && (
+                <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
+              )}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          plan.items.map(item => {
+            if (item.type === 'separator') {
+              const sep = item as SeparatorItem
+              const label = sep.label || BLOCK_LABELS[sep.block]
+              return <SectionHeader key={sep.id} label={label} />
+            }
+            const taskItem = item as TaskItem
+            return (
               <TaskRow
-                item={draggingItem as TaskItem}
-                hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
-                editMode={true}
-                onToggle={() => {}}
+                key={taskItem.id}
+                item={taskItem}
+                hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
+                onToggle={() => toggleItem(taskItem.id)}
+                onDescClick={() => handleDescClick(taskItem)}
               />
-            )}
-            {draggingItem && draggingItem.type === 'separator' && (
-              <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
-            )}
-          </DragOverlay>
-        </DndContext>
+            )
+          })
+        )}
 
         {tasks.length === 0 && (
           <div className="today-empty">
