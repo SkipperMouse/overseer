@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, MouseSensor, TouchSensor, KeyboardSensor } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
-import type { Task, TaskItem, SeparatorItem, Block } from '../../types'
+import type { Task, TaskItem, SeparatorItem, DayItem, Block } from '../../types'
 import SectionHeader from '../today/SectionHeader'
 import TaskRow from '../today/TaskRow'
 import SortableTaskRow from '../today/SortableTaskRow'
@@ -210,6 +210,15 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     setPendingAdd(null)
   }
 
+  // Group items by block for structured rendering (mirrors TemplateEditScreen layout)
+  const groupedItems = useMemo(() => {
+    const g: Record<Block, DayItem[]> = { morning: [], day: [], evening: [] }
+    for (const item of plan?.items ?? []) g[item.block].push(item)
+    return g
+  }, [plan?.items])
+
+  const allSortedIds = BLOCKS.flatMap(b => (groupedItems[b] ?? []).map(i => i.id))
+
   function handleDragStart(event: DragStartEvent) {
     setDraggingId(String(event.active.id))
   }
@@ -220,11 +229,10 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     if (!over || active.id === over.id || !plan) return
     const activeId = String(active.id)
     const overId = String(over.id)
-    const allIds = plan.items.map(i => i.id)
-    const oldIdx = allIds.indexOf(activeId)
-    const newIdx = allIds.indexOf(overId)
+    const oldIdx = allSortedIds.indexOf(activeId)
+    const newIdx = allSortedIds.indexOf(overId)
     if (oldIdx === -1 || newIdx === -1) return
-    reorderItems(arrayMove(allIds, oldIdx, newIdx))
+    reorderItems(arrayMove(allSortedIds, oldIdx, newIdx))
   }
 
   function handleDescClick(item: TaskItem) {
@@ -279,25 +287,37 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={plan.items.map(i => i.id)}
+              items={allSortedIds}
               strategy={verticalListSortingStrategy}
             >
-              {plan.items.map(item => {
-                if (item.type === 'separator') {
-                  const sep = item as SeparatorItem
-                  const label = sep.label || BLOCK_LABELS[sep.block]
-                  return <SortableSeparator key={sep.id} id={sep.id} label={label} draggable={true} />
-                }
-                const taskItem = item as TaskItem
-                return (
-                  <SortableTaskRow
-                    key={taskItem.id}
-                    item={taskItem}
-                    hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
-                    onDelete={() => removeItem(taskItem.id)}
-                  />
-                )
-              })}
+              {BLOCKS.map(block => (
+                <div key={block} className="today-block">
+                  <div className="today-block-items">
+                    {(groupedItems[block] ?? []).map((item: DayItem) => {
+                      if (item.type === 'separator') {
+                        const sep = item as SeparatorItem
+                        return (
+                          <SortableSeparator
+                            key={sep.id}
+                            id={sep.id}
+                            label={sep.label || BLOCK_LABELS[block]}
+                            draggable={true}
+                          />
+                        )
+                      }
+                      const taskItem = item as TaskItem
+                      return (
+                        <SortableTaskRow
+                          key={taskItem.id}
+                          item={taskItem}
+                          hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
+                          onDelete={() => removeItem(taskItem.id)}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
             </SortableContext>
 
             <DragOverlay dropAnimation={null}>

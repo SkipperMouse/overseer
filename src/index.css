@@ -1658,6 +1658,14 @@ body {
   text-shadow: var(--accent-glow);
 }
 
+.today-block {
+  /* non-draggable block wrapper — creates intermediate DOM layer between scroll container and sortable items */
+}
+
+.today-block-items {
+  /* non-draggable items wrapper — mirrors .tmpl-block-items from TemplateEditScreen */
+}
+
 .day-view-edit-section {
   padding: 12px 16px;
   border-top: 1px solid var(--border-dim);
