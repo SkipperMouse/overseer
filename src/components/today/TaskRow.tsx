@@ -22,8 +22,10 @@ export default function TaskRow({
     <div
       className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
       {...(editMode && dragProps ? dragProps.attributes : {})}
-      {...(editMode && dragProps ? dragProps.listeners : {})}
     >
+      {editMode && dragProps && (
+        <div className="drag-handle" {...dragProps.listeners}>⠿</div>
+      )}
       <div
         className="task-check-area"
         onClick={e => { e.stopPropagation(); if (!editMode) onToggle() }}

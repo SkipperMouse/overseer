@@ -21,8 +21,8 @@ export default function SortableSeparator({ id, label, draggable }: Props) {
       className={`section-header-drag${isDragging ? ' dragging' : ''}`}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
       {...attributes}
-      {...listeners}
     >
+      <div className="drag-handle" {...listeners}>⠿</div>
       <SectionHeader label={label} />
     </div>
   )

@@ -117,8 +117,8 @@ function SortableTmplRow({ item, onDelete }: { item: TemplateItem; onDelete: () 
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0 : 1 }}
       className={`tmpl-item-row${isDragging ? ' dragging' : ''}`}
       {...attributes}
-      {...listeners}
     >
+      <div className="drag-handle" {...listeners}>⠿</div>
       {item.type === 'separator' ? (
         <span className="tmpl-item-sep-label text-muted">
           — {item.separator_label}
@@ -229,7 +229,7 @@ export default function TemplateEditScreen({ template, onBack }: Props) {
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 

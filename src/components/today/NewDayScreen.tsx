@@ -84,14 +84,12 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`task-row${isDragging ? ' dragging' : ''}`}
     >
-      <span
-        className="drag-grip"
+      <div
+        className="drag-handle"
         {...attributes}
         {...listeners}
         onClick={e => e.stopPropagation()}
-      >
-        ⠿
-      </span>
+      >⠿</div>
       {item.icon
         ? <span className="task-icon pip-emoji">{item.icon}</span>
         : <span className="task-icon" />
@@ -122,7 +120,7 @@ export default function NewDayScreen({ onDone }: Props) {
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
