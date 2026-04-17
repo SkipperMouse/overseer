@@ -138,25 +138,11 @@ body {
 /* ─── Edit-mode drag zone ───────────────────────────────────────── */
 .task-row.edit-mode {
   user-select: none;
-  cursor: default;
-}
-
-.drag-handle {
-  flex-shrink: 0;
-  width: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-dim);
-  font-size: 14px;
   cursor: grab;
-  touch-action: none;
-  user-select: none;
 }
 
-.drag-handle:active {
+.task-row.edit-mode:active {
   cursor: grabbing;
-  color: var(--accent);
 }
 
 .task-row.edit-mode .task-title,
