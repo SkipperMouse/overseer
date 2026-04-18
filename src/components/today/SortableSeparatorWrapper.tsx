@@ -29,7 +29,11 @@ export default function SortableSeparatorWrapper({ item, mode, label }: WrapperP
   }
 
   if (mode !== 'edit') {
-    return <SectionHeader label={label} />
+    return (
+      <div ref={setNodeRef} style={{ transform: 'none', transition: 'none' }}>
+        <SectionHeader label={label} />
+      </div>
+    )
   }
 
   return (
