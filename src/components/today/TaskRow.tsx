@@ -21,28 +21,40 @@ export default function TaskRow({
   return (
     <div
       className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
-      {...(editMode && dragProps ? dragProps.attributes : {})}
-      {...(editMode && dragProps ? dragProps.listeners : {})}
     >
       <div
         className="task-check-area"
-        onClick={e => { e.stopPropagation(); if (!editMode) onToggle() }}
+        onClick={e => {
+          e.stopPropagation()
+          // Allow checking/unchecking in both modes.
+          onToggle()
+        }}
       >
         <input
           type="checkbox"
           className="checkbox"
           checked={item.checked}
-          onChange={editMode ? () => {} : onToggle}
+          readOnly // We handle the toggle on the parent div click.
           onClick={e => e.stopPropagation()}
           onPointerDown={e => e.stopPropagation()}
         />
       </div>
 
+      {editMode && (
+        <span
+          className="drag-handle"
+          {...dragProps?.attributes}
+          {...dragProps?.listeners}
+        >
+          ⠿
+        </span>
+      )}
+
       {item.icon && (
         <span className="task-icon pip-emoji">{item.icon}</span>
       )}
 
-      <span className="task-title">{item.title}</span>
+      <span className="task-title" onClick={e => { e.stopPropagation(); onDescClick?.() }}>{item.title}</span>
 
       {item.duration && (
         <span className="task-duration">{item.duration}m</span>
