@@ -136,21 +136,29 @@ body {
 }
 
 /* ─── Edit-mode drag zone ───────────────────────────────────────── */
-.drag-handle {
-  touch-action: none;
+.task-row.edit-mode {
   cursor: grab;
-  color: var(--text-dim);
-  padding: 2px 8px 2px 4px;
-  flex-shrink: 0;
-  font-size: 14px;
   user-select: none;
+  touch-action: none;
 }
-.drag-handle:active {
+
+.task-row.edit-mode:active {
   cursor: grabbing;
 }
 
+.task-row.edit-mode .task-title,
+.task-row.edit-mode .task-icon,
+.task-row.edit-mode .task-duration,
+.task-row.edit-mode .task-desc-indicator {
+  pointer-events: none;
+}
+
 .task-row.edit-mode .task-check-area {
-  pointer-events: auto;
+  pointer-events: none;
+}
+
+.task-row.edit-mode .checkbox {
+  opacity: 0.35;
 }
 
 .task-row.edit-mode .pool-del-btn {
@@ -354,8 +362,11 @@ body {
 }
 
 .section-header-drag {
-  display: flex;
-  align-items: center;
+  touch-action: none;
+  cursor: grab;
+}
+.section-header-drag:active {
+  cursor: grabbing;
 }
 
 /* ─── Task row layout ────────────────────────────────────────── */
@@ -1656,14 +1667,6 @@ body {
 .day-view-action-done:hover {
   color: var(--accent);
   text-shadow: var(--accent-glow);
-}
-
-.today-block {
-  /* non-draggable block wrapper — creates intermediate DOM layer between scroll container and sortable items */
-}
-
-.today-block-items {
-  /* non-draggable items wrapper — mirrors .tmpl-block-items from TemplateEditScreen */
 }
 
 .day-view-edit-section {

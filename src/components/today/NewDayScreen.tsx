@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { DndContext, closestCenter, useSensor, useSensors, MouseSensor, TouchSensor, KeyboardSensor } from '@dnd-kit/core'
+import { DndContext, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { DragEndEvent } from '@dnd-kit/core'
@@ -84,7 +84,14 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`task-row${isDragging ? ' dragging' : ''}`}
     >
-      <span className="drag-handle" {...attributes} {...listeners}>⠿</span>
+      <span
+        className="drag-grip"
+        {...attributes}
+        {...listeners}
+        onClick={e => e.stopPropagation()}
+      >
+        ⠿
+      </span>
       {item.icon
         ? <span className="task-icon pip-emoji">{item.icon}</span>
         : <span className="task-icon" />
@@ -92,7 +99,7 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
       <span className="task-title">{item.title}</span>
       {item.duration && <span className="task-duration">{item.duration}m</span>}
       {item.taskId === null && <span className="nd-onetime-badge">разовая</span>}
-      <button className="pool-del-btn" onClick={() => onDelete()} onPointerDown={e => e.stopPropagation()}>×</button>
+      <button className="pool-del-btn" onClick={() => onDelete()}>×</button>
     </div>
   )
 }
@@ -114,8 +121,7 @@ export default function NewDayScreen({ onDone }: Props) {
   const [showOnetimePicker, setShowOnetimePicker] = useState(false)
 
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 10 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 

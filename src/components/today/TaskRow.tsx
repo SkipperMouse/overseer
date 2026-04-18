@@ -21,43 +21,28 @@ export default function TaskRow({
   return (
     <div
       className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
+      {...(editMode && dragProps ? dragProps.attributes : {})}
+      {...(editMode && dragProps ? dragProps.listeners : {})}
     >
       <div
         className="task-check-area"
-        onClick={e => {
-          e.stopPropagation()
-          // In edit mode, the main toggle is disabled, but we want to check/uncheck
-          if (editMode) onToggle()
-          if (!editMode) onToggle()
-        }}
+        onClick={e => { e.stopPropagation(); if (!editMode) onToggle() }}
       >
         <input
           type="checkbox"
           className="checkbox"
           checked={item.checked}
-          readOnly={editMode} // Prevent direct interaction in edit mode, use wrapper click
-          onChange={onToggle}
+          onChange={editMode ? () => {} : onToggle}
           onClick={e => e.stopPropagation()}
           onPointerDown={e => e.stopPropagation()}
         />
       </div>
 
-      {editMode && (
-        <span
-          className="drag-handle"
-          {...dragProps?.attributes}
-          {...dragProps?.listeners}
-          aria-label="перетащить задачу"
-        >
-          ⠿
-        </span>
-      )}
-
       {item.icon && (
         <span className="task-icon pip-emoji">{item.icon}</span>
       )}
 
-      <span className="task-title" onClick={e => { e.stopPropagation(); onDescClick?.() }}>{item.title}</span>
+      <span className="task-title">{item.title}</span>
 
       {item.duration && (
         <span className="task-duration">{item.duration}m</span>
@@ -70,7 +55,7 @@ export default function TaskRow({
         >¶</span>
       )}
 
-      {editMode && onDelete && (
+      {onDelete && (
         <button
           className="pool-del-btn"
           onClick={e => { e.stopPropagation(); onDelete() }}

@@ -1,12 +1,14 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, MouseSensor, TouchSensor, KeyboardSensor } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
-import type { Task, TaskItem, SeparatorItem, DayItem, Block } from '../../types'
+import type { Task, TaskItem, SeparatorItem, Block } from '../../types'
 import SectionHeader from '../today/SectionHeader'
-import UnifiedDayItem from '../today/UnifiedDayItem'
+import TaskRow from '../today/TaskRow'
+import SortableTaskRow from '../today/SortableTaskRow'
+import SortableSeparator from '../today/SortableSeparator'
 import EmojiPicker from '../tasks/EmojiPicker'
 import TaskDescriptionScreen from '../tasks/TaskDescriptionScreen'
 
@@ -115,9 +117,11 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [descTask, setDescTask] = useState<Task | null>(null)
 
+  // MouseSensor: activate after 8px movement (desktop)
+  // TouchSensor: activate after 250ms delay with 5px tolerance (mobile — avoids scroll interference)
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 10 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
@@ -208,15 +212,6 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     setPendingAdd(null)
   }
 
-  // Grouping items by block allows for correct cross-block drag-and-drop.
-  const groupedItems = useMemo(() => {
-    const g: Record<Block, DayItem[]> = { morning: [], day: [], evening: [] }
-    for (const item of plan?.items ?? []) g[item.block].push(item)
-    return g
-  }, [plan?.items])
-
-  const allSortedIds = useMemo(() => BLOCKS.flatMap(b => (groupedItems[b] ?? []).map(i => i.id)), [groupedItems])
-
   function handleDragStart(event: DragStartEvent) {
     setDraggingId(String(event.active.id))
   }
@@ -227,10 +222,11 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     if (!over || active.id === over.id || !plan) return
     const activeId = String(active.id)
     const overId = String(over.id)
-    const oldIdx = allSortedIds.indexOf(activeId)
-    const newIdx = allSortedIds.indexOf(overId)
+    const allIds = plan.items.map(i => i.id)
+    const oldIdx = allIds.indexOf(activeId)
+    const newIdx = allIds.indexOf(overId)
     if (oldIdx === -1 || newIdx === -1) return
-    reorderItems(arrayMove(allSortedIds, oldIdx, newIdx))
+    reorderItems(arrayMove(allIds, oldIdx, newIdx))
   }
 
   function handleDescClick(item: TaskItem) {
@@ -284,52 +280,61 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={allSortedIds}
+            items={plan.items.map(i => i.id)}
             strategy={verticalListSortingStrategy}
           >
-            {plan.items.map(item => (
-              <UnifiedDayItem
-                key={item.id}
-                item={item}
-                mode={mode}
-                label={(item as SeparatorItem).label || BLOCK_LABELS[item.block]}
-                hasDesc={(item as TaskItem).task_id ? taskDescIds.has((item as TaskItem).task_id!) : false}
-                onDelete={removeItem}
-                onToggle={toggleItem}
-                onDescClick={() => handleDescClick(item as TaskItem)}
-              />
-            ))}
-
-            {tasks.length === 0 && mode === 'view' && (
-              <div className="today-empty">
-                <span className="text-muted">// задачи не добавлены</span>
-              </div>
-            )}
+            {plan.items.map(item => {
+              if (item.type === 'separator') {
+                const sep = item as SeparatorItem
+                const label = sep.label || BLOCK_LABELS[sep.block]
+                return mode === 'edit'
+                  ? <SortableSeparator key={sep.id} id={sep.id} label={label} draggable={true} />
+                  : <SectionHeader key={sep.id} label={label} />
+              }
+              const taskItem = item as TaskItem
+              return mode === 'edit'
+                ? (
+                  <SortableTaskRow
+                    key={taskItem.id}
+                    item={taskItem}
+                    hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
+                    onToggle={() => toggleItem(taskItem.id)}
+                    onDelete={() => removeItem(taskItem.id)}
+                    onDescClick={() => handleDescClick(taskItem)}
+                  />
+                )
+                : (
+                  <TaskRow
+                    key={taskItem.id}
+                    item={taskItem}
+                    hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
+                    onToggle={() => toggleItem(taskItem.id)}
+                    onDescClick={() => handleDescClick(taskItem)}
+                  />
+                )
+            })}
           </SortableContext>
 
           <DragOverlay dropAnimation={null}>
             {draggingItem && draggingItem.type === 'task' && (
-              <div className={`task-row edit-mode dragging ${(draggingItem as TaskItem).checked ? ' done' : ''}`}>
-                <div className="task-check-area">
-                  <input type="checkbox" className="checkbox" checked={(draggingItem as TaskItem).checked} readOnly />
-                </div>
-                <span className="drag-handle">⠿</span>
-                {(draggingItem as TaskItem).icon && (
-                  <span className="task-icon pip-emoji">{(draggingItem as TaskItem).icon}</span>
-                )}
-                <span className="task-title">{(draggingItem as TaskItem).title}</span>
-                {(draggingItem as TaskItem).duration && (
-                  <span className="task-duration">{(draggingItem as TaskItem).duration}m</span>
-                )}
-              </div>
+              <TaskRow
+                item={draggingItem as TaskItem}
+                hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
+                editMode={true}
+                onToggle={() => {}}
+              />
             )}
             {draggingItem && draggingItem.type === 'separator' && (
-              <div className="section-header-drag dragging">
-                <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
-              </div>
+              <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
             )}
           </DragOverlay>
         </DndContext>
+
+        {tasks.length === 0 && (
+          <div className="today-empty">
+            <span className="text-muted">// задачи не добавлены</span>
+          </div>
+        )}
 
         {mode === 'edit' && (
           <div className="day-view-edit-section">
