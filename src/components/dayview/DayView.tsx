@@ -6,8 +6,7 @@ import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
 import type { Task, TaskItem, SeparatorItem, DayItem, Block } from '../../types'
 import SectionHeader from '../today/SectionHeader'
-import SortableTaskRowWrapper from '../today/SortableTaskRowWrapper'
-import SortableSeparatorWrapper from '../today/SortableSeparatorWrapper'
+import UnifiedDayItem from '../today/UnifiedDayItem'
 import EmojiPicker from '../tasks/EmojiPicker'
 import TaskDescriptionScreen from '../tasks/TaskDescriptionScreen'
 
@@ -209,7 +208,6 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     setPendingAdd(null)
   }
 
-  // Group items by block for structured rendering (mirrors TemplateEditScreen layout)
   const groupedItems = useMemo(() => {
     const g: Record<Block, DayItem[]> = { morning: [], day: [], evening: [] }
     for (const item of plan?.items ?? []) g[item.block].push(item)
@@ -288,32 +286,18 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
             items={allSortedIds}
             strategy={verticalListSortingStrategy}
           >
-            {plan.items.map(item => {
-              if (item.type === 'separator') {
-                const sep = item as SeparatorItem
-                const label = sep.label || BLOCK_LABELS[sep.block]
-                return (
-                  <SortableSeparatorWrapper
-                    key={sep.id}
-                    item={sep}
-                    mode={mode}
-                    label={label}
-                  />
-                )
-              }
-              const taskItem = item as TaskItem
-              return (
-                <SortableTaskRowWrapper
-                  key={taskItem.id}
-                  item={taskItem}
-                  mode={mode}
-                  hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
-                  onDelete={() => removeItem(taskItem.id)}
-                  onToggle={() => toggleItem(taskItem.id)}
-                  onDescClick={() => handleDescClick(taskItem)}
-                />
-              )
-            })}
+            {plan.items.map(item => (
+              <UnifiedDayItem
+                key={item.id}
+                item={item}
+                mode={mode}
+                label={(item as SeparatorItem).label || BLOCK_LABELS[item.block]}
+                hasDesc={(item as TaskItem).task_id ? taskDescIds.has((item as TaskItem).task_id!) : false}
+                onDelete={() => removeItem(item.id)}
+                onToggle={() => toggleItem(item.id)}
+                onDescClick={() => handleDescClick(item as TaskItem)}
+              />
+            ))}
 
             {tasks.length === 0 && mode === 'view' && (
               <div className="today-empty">
