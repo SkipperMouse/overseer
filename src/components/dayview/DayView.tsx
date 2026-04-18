@@ -208,13 +208,14 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     setPendingAdd(null)
   }
 
+  // Grouping items by block allows for correct cross-block drag-and-drop.
   const groupedItems = useMemo(() => {
     const g: Record<Block, DayItem[]> = { morning: [], day: [], evening: [] }
     for (const item of plan?.items ?? []) g[item.block].push(item)
     return g
   }, [plan?.items])
 
-  const allSortedIds = BLOCKS.flatMap(b => (groupedItems[b] ?? []).map(i => i.id))
+  const allSortedIds = useMemo(() => BLOCKS.flatMap(b => (groupedItems[b] ?? []).map(i => i.id)), [groupedItems])
 
   function handleDragStart(event: DragStartEvent) {
     setDraggingId(String(event.active.id))
@@ -293,8 +294,8 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                 mode={mode}
                 label={(item as SeparatorItem).label || BLOCK_LABELS[item.block]}
                 hasDesc={(item as TaskItem).task_id ? taskDescIds.has((item as TaskItem).task_id!) : false}
-                onDelete={() => removeItem(item.id)}
-                onToggle={() => toggleItem(item.id)}
+                onDelete={removeItem}
+                onToggle={toggleItem}
                 onDescClick={() => handleDescClick(item as TaskItem)}
               />
             ))}
