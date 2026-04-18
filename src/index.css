@@ -137,6 +137,7 @@ body {
 
 /* ─── Edit-mode drag zone ───────────────────────────────────────── */
 .drag-handle {
+  touch-action: none;
   cursor: grab;
   color: var(--text-dim);
   padding: 2px 8px 2px 4px;

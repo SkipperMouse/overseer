@@ -279,98 +279,73 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       </header>
 
       <div className="today-content">
-        {mode === 'edit' ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={allSortedIds}
+            strategy={verticalListSortingStrategy}
           >
-            <SortableContext
-              items={allSortedIds}
-              strategy={verticalListSortingStrategy}
-            >
-              {BLOCKS.map(block => (
-                <div key={block} className="today-block">
-                  <div className="today-block-items">
-                    {(groupedItems[block] ?? []).map((item: DayItem) => {
-                      if (item.type === 'separator') {
-                        const sep = item as SeparatorItem
-                        return (
-                          <SortableSeparator
-                            key={sep.id}
-                            id={sep.id}
-                            label={sep.label || BLOCK_LABELS[block]}
-                            draggable={true}
-                          />
-                        )
-                      }
-                      const taskItem = item as TaskItem
-                      return (
-                        <SortableTaskRow
-                          key={taskItem.id}
-                          item={taskItem}
-                          hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
-                          onDelete={() => removeItem(taskItem.id)}
-                        />
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </SortableContext>
+            {plan.items.map(item => {
+              if (item.type === 'separator') {
+                const sep = item as SeparatorItem
+                const label = sep.label || BLOCK_LABELS[sep.block]
+                return (
+                  <SortableSeparatorWrapper
+                    key={sep.id}
+                    item={sep}
+                    mode={mode}
+                    label={label}
+                  />
+                )
+              }
+              const taskItem = item as TaskItem
+              return (
+                <SortableTaskRowWrapper
+                  key={taskItem.id}
+                  item={taskItem}
+                  mode={mode}
+                  hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
+                  onDelete={() => removeItem(taskItem.id)}
+                  onToggle={() => toggleItem(taskItem.id)}
+                  onDescClick={() => handleDescClick(taskItem)}
+                />
+              )
+            })}
 
-            <DragOverlay dropAnimation={null}>
-              {draggingItem && draggingItem.type === 'task' && (
-                <div className={`task-row edit-mode${(draggingItem as TaskItem).checked ? ' done' : ''}`}>
-                  <div className="task-check-area" onPointerDown={e => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={(draggingItem as TaskItem).checked}
-                      onChange={() => {}}
-                    />
-                  </div>
-                  <span className="drag-handle">⠿</span>
-                  {(draggingItem as TaskItem).icon && (
-                    <span className="task-icon pip-emoji">{(draggingItem as TaskItem).icon}</span>
-                  )}
-                  <span className="task-title">{(draggingItem as TaskItem).title}</span>
-                  {(draggingItem as TaskItem).duration && (
-                    <span className="task-duration">{(draggingItem as TaskItem).duration}m</span>
-                  )}
+            {tasks.length === 0 && mode === 'view' && (
+              <div className="today-empty">
+                <span className="text-muted">// задачи не добавлены</span>
+              </div>
+            )}
+          </SortableContext>
+
+          <DragOverlay dropAnimation={null}>
+            {draggingItem && draggingItem.type === 'task' && (
+              <div className={`task-row edit-mode dragging ${(draggingItem as TaskItem).checked ? ' done' : ''}`}>
+                <div className="task-check-area">
+                  <input type="checkbox" className="checkbox" checked={(draggingItem as TaskItem).checked} readOnly />
                 </div>
-              )}
-              {draggingItem && draggingItem.type === 'separator' && (
+                <span className="drag-handle">⠿</span>
+                {(draggingItem as TaskItem).icon && (
+                  <span className="task-icon pip-emoji">{(draggingItem as TaskItem).icon}</span>
+                )}
+                <span className="task-title">{(draggingItem as TaskItem).title}</span>
+                {(draggingItem as TaskItem).duration && (
+                  <span className="task-duration">{(draggingItem as TaskItem).duration}m</span>
+                )}
+              </div>
+            )}
+            {draggingItem && draggingItem.type === 'separator' && (
+              <div className="section-header-drag dragging">
                 <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
-              )}
-            </DragOverlay>
-          </DndContext>
-        ) : (
-          plan.items.map(item => {
-            if (item.type === 'separator') {
-              const sep = item as SeparatorItem
-              const label = sep.label || BLOCK_LABELS[sep.block]
-              return <SectionHeader key={sep.id} label={label} />
-            }
-            const taskItem = item as TaskItem
-            return (
-              <TaskRow
-                key={taskItem.id}
-                item={taskItem}
-                hasDesc={taskItem.task_id ? taskDescIds.has(taskItem.task_id) : false}
-                onToggle={() => toggleItem(taskItem.id)}
-                onDescClick={() => handleDescClick(taskItem)}
-              />
-            )
-          })
-        )}
-
-        {tasks.length === 0 && (
-          <div className="today-empty">
-            <span className="text-muted">// задачи не добавлены</span>
-          </div>
-        )}
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
 
         {mode === 'edit' && (
           <div className="day-view-edit-section">
@@ -461,6 +436,30 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
         <NoteArea initialValue={plan.note ?? ''} onSave={saveNote} />
       </div>
+
+      {pendingAdd && (
+        <div className="nd-picker-overlay" onClick={() => setPendingAdd(null)}>
+          <div className="nd-picker" onClick={e => e.stopPropagation()}>
+            <div className="nd-picker-label prompt-line">{'>'} добавить в блок:</div>
+            <div className="nd-picker-task-name">
+              {pendingAdd.kind === 'pool'
+                ? <>{pendingAdd.task.icon && <span className="pip-emoji">{pendingAdd.task.icon}</span>} {pendingAdd.task.title}</>
+                : <>{pendingAdd.icon && <span className="pip-emoji">{pendingAdd.icon}</span>} {pendingAdd.title}</>
+              }
+            </div>
+            {BLOCKS.map(block => (
+              <button key={block} className="nd-picker-btn" onClick={() => confirmAdd(block)}>
+                {BLOCK_LABELS[block]}
+              </button>
+            ))}
+            <button className="nd-picker-cancel" onClick={() => setPendingAdd(null)}>отмена</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+ </div>
 
       {pendingAdd && (
         <div className="nd-picker-overlay" onClick={() => setPendingAdd(null)}>
