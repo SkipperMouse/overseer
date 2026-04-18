@@ -2,7 +2,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import TaskRow from './TaskRow'
 import type { TaskItem } from '../../types'
-import { MouseEvent } from 'react'
+import type { MouseEvent } from 'react'
 
 interface WrapperProps {
   item: TaskItem

@@ -6,9 +6,8 @@ import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
 import type { Task, TaskItem, SeparatorItem, DayItem, Block } from '../../types'
 import SectionHeader from '../today/SectionHeader'
-import TaskRow from '../today/TaskRow'
-import SortableTaskRow from '../today/SortableTaskRow'
-import SortableSeparator from '../today/SortableSeparator'
+import SortableTaskRowWrapper from '../today/SortableTaskRowWrapper'
+import SortableSeparatorWrapper from '../today/SortableSeparatorWrapper'
 import EmojiPicker from '../tasks/EmojiPicker'
 import TaskDescriptionScreen from '../tasks/TaskDescriptionScreen'
 
@@ -436,30 +435,6 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
         <NoteArea initialValue={plan.note ?? ''} onSave={saveNote} />
       </div>
-
-      {pendingAdd && (
-        <div className="nd-picker-overlay" onClick={() => setPendingAdd(null)}>
-          <div className="nd-picker" onClick={e => e.stopPropagation()}>
-            <div className="nd-picker-label prompt-line">{'>'} добавить в блок:</div>
-            <div className="nd-picker-task-name">
-              {pendingAdd.kind === 'pool'
-                ? <>{pendingAdd.task.icon && <span className="pip-emoji">{pendingAdd.task.icon}</span>} {pendingAdd.task.title}</>
-                : <>{pendingAdd.icon && <span className="pip-emoji">{pendingAdd.icon}</span>} {pendingAdd.title}</>
-              }
-            </div>
-            {BLOCKS.map(block => (
-              <button key={block} className="nd-picker-btn" onClick={() => confirmAdd(block)}>
-                {BLOCK_LABELS[block]}
-              </button>
-            ))}
-            <button className="nd-picker-cancel" onClick={() => setPendingAdd(null)}>отмена</button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
- </div>
 
       {pendingAdd && (
         <div className="nd-picker-overlay" onClick={() => setPendingAdd(null)}>
