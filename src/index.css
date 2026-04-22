@@ -146,7 +146,6 @@ body {
   font-size: 14px;
   user-select: none;
 }
-
 .drag-handle:active {
   cursor: grabbing;
 }
