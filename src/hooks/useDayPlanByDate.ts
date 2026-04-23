@@ -49,6 +49,8 @@ export function useDayPlanByDate(date: string) {
   const updatedAtRef = useRef<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPersistRef = useRef<{ planId: string; items: DayItem[] } | null>(null)
+  // Holds the cancellation signal for the latest in-flight loadPlan call
+  const cancelSignalRef = useRef<{ cancelled: boolean }>({ cancelled: false })
 
   const loadPlan = useCallback(async (signal: { cancelled: boolean }) => {
     setLoading(true)
@@ -86,6 +88,7 @@ export function useDayPlanByDate(date: string) {
 
   useEffect(() => {
     const signal = { cancelled: false }
+    cancelSignalRef.current = signal
     loadPlan(signal)
     return () => { signal.cancelled = true }
   }, [loadPlan])
@@ -110,7 +113,11 @@ export function useDayPlanByDate(date: string) {
         // 0 rows matched: remote write happened since our last read — reload
         console.warn('Write conflict detected on day_plans, reloading')
         pendingPersistRef.current = null
-        loadPlan({ cancelled: false })
+        // Cancel any in-flight load; start a fresh cancellable reload
+        cancelSignalRef.current.cancelled = true
+        const reloadSignal = { cancelled: false }
+        cancelSignalRef.current = reloadSignal
+        loadPlan(reloadSignal)
         setWriteConflict(true)
       } else if (data) {
         updatedAtRef.current = (data as { updated_at: string }).updated_at
@@ -118,7 +125,8 @@ export function useDayPlanByDate(date: string) {
     }, 300)
   }, [loadPlan])
 
-  // Flush any pending debounced write when date changes or component unmounts
+  // Flush any pending debounced write when date changes or component unmounts.
+  // Applies CAS so we never overwrite a newer remote write.
   useEffect(() => {
     return () => {
       if (debounceRef.current !== null) {
@@ -127,9 +135,11 @@ export function useDayPlanByDate(date: string) {
       }
       if (pendingPersistRef.current !== null) {
         const { planId, items } = pendingPersistRef.current
+        const knownAt = updatedAtRef.current
         pendingPersistRef.current = null
-        supabase.from('day_plans').update({ items }).eq('id', planId)
-          .then(({ error }) => { if (error) console.error(error) })
+        const query = supabase.from('day_plans').update({ items }).eq('id', planId)
+        const finalQuery = knownAt !== null ? query.eq('updated_at', knownAt) : query
+        finalQuery.then(({ error }) => { if (error) console.error(error) })
       }
     }
   }, [date])
