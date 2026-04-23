@@ -162,7 +162,9 @@ export default function TaskPoolScreen() {
               {tmplDelConfirmId === tmpl.id ? (
                 <button
                   className="pool-del-btn pool-del-confirm"
+                  autoFocus
                   onClick={() => { deleteTemplate(tmpl.id); setTmplDelConfirmId(null) }}
+                  onBlur={() => setTmplDelConfirmId(null)}
                 >удалить?</button>
               ) : (
                 <button className="pool-del-btn" onClick={() => setTmplDelConfirmId(tmpl.id)}>×</button>
