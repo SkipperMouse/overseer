@@ -362,7 +362,15 @@ export default function NewDayScreen({ onDone }: Props) {
       )}
 
       <header className="nd-header">
-        <button className="desc-back" onClick={() => setStep('pick-template')}>← назад</button>
+        <button className="desc-back" onClick={() => {
+          setStep('pick-template')
+          setShowOnetimeForm(false)
+          setShowOnetimePicker(false)
+          setOnetimeTitle('')
+          setOnetimeDuration('')
+          setOnetimeIcon('')
+          setPendingForBlock(null)
+        }}>← назад</button>
         <span className="label-section nd-header-title">компоновка плана</span>
       </header>
 

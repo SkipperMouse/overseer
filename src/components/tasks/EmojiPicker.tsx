@@ -26,8 +26,11 @@ export default function EmojiPicker({ onSelect, onClose }: Props) {
     }
 
     function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const codepoints = [...e.target.value]
-        setCustomVal(codepoints.slice(0, 2).join(''))
+        const value = e.target.value
+        if (!value) { setCustomVal(''); return }
+        // Intl.Segmenter handles ZWJ sequences (flags, family emojis, etc.)
+        const segments = [...new Intl.Segmenter().segment(value)]
+        setCustomVal(segments[0]?.segment ?? '')
     }
 
     return (
