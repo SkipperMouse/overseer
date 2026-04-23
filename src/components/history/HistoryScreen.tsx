@@ -2,12 +2,7 @@ import { useState } from 'react'
 import { useHistory } from '../../hooks/useHistory'
 import TodayScreen from '../today/TodayScreen'
 import type { DayPlan, TaskItem } from '../../types'
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString('ru-RU', { weekday: 'short', day: '2-digit', month: 'short' })
-}
+import { formatDate } from '../../lib/date'
 
 function getProgress(plan: DayPlan): { done: number; total: number } {
   const tasks = plan.items.filter((i): i is TaskItem => i.type === 'task')
@@ -15,7 +10,7 @@ function getProgress(plan: DayPlan): { done: number; total: number } {
 }
 
 export default function HistoryScreen() {
-  const { plans, loading, deletePlan } = useHistory()
+  const { plans, loading, loadingMore, hasMore, loadMore, deletePlan } = useHistory()
   const [viewingDate, setViewingDate] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
@@ -97,6 +92,15 @@ export default function HistoryScreen() {
               </div>
             )
           })}
+          {hasMore && (
+            <button
+              className="history-load-more"
+              disabled={loadingMore}
+              onClick={loadMore}
+            >
+              {loadingMore ? 'загрузка...' : '// загрузить ещё'}
+            </button>
+          )}
         </div>
       )}
     </div>

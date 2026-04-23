@@ -1,10 +1,7 @@
 import { useDayPlanByDate } from './useDayPlanByDate'
+import { todayDate } from '../lib/date'
 
 export { canMove } from './useDayPlanByDate'
-
-function todayDate() {
-  return new Date().toLocaleDateString('en-CA')
-}
 
 export function useDayPlan() {
   return useDayPlanByDate(todayDate())

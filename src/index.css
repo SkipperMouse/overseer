@@ -150,7 +150,11 @@ body {
   cursor: grabbing;
 }
 
-/* In edit mode, we can still click the delete button */
+/* In edit mode, disable checkbox toggle; delete button stays clickable */
+.task-row.edit-mode .task-check-area {
+  pointer-events: none;
+}
+
 .task-row.edit-mode .pool-del-btn {
   pointer-events: auto;
 }
@@ -1625,6 +1629,22 @@ body {
   flex-shrink: 0;
 }
 
+.history-load-more {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.history-load-more:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ─── Day view screen ─────────────────────────────────────────── */
 .day-view-screen {
   flex: 1;
@@ -1727,4 +1747,20 @@ body {
   min-height: 40px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 16px;
+  color: var(--text-dim);
+}
+
+.day-view-conflict-banner {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border-dim);
+  background: var(--bg-surface);
 }

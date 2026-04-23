@@ -26,7 +26,7 @@ If the branch name already exists, generate a different slug — do not add nume
 
 ### Constraints
 - No `git fetch`, no `git pull` — repository state is managed manually
-- No commits, no pushes — only branch creation and file changes
+- Ask before commit and push
 - If no branch has been created yet in the session and a task begins, create the branch before making any changes
 
 ## Commands
@@ -79,8 +79,6 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 - **HistoryScreen** — renders `TodayScreen` (with `date` + `onBack` props) in place when `viewingDate !== null`.
 
 **Adding a new top-level screen** requires four changes: new hook + component under `src/components/<name>/`, CSS section in `src/index.css`, import + render in `App.tsx`, and adding the id to `NAV_ITEMS` in `BottomNav.tsx` (also update the `Screen` type there).
-
-`src/components/templates/TemplatesScreen.tsx` and `TemplateListScreen.tsx` are not wired into `App.tsx` — they are dead code (replaced by `TaskPoolScreen` hosting templates inline).
 
 ### DayView component
 
@@ -153,7 +151,7 @@ This is why Supabase requests are `NetworkOnly` in the SW. **Do not switch to Ne
 - `dist/assets/*` — содержат хэш в имени файла (Rollup `[name]-[hash]`), кэшируются 1 год (`immutable`)
 - `index.html`, `sw.js`, `manifest.webmanifest` — `no-cache, no-store` (всегда свежие)
 - Service Worker: `registerType: 'autoUpdate'`, `skipWaiting: true`, `clientsClaim: true`, `cleanupOutdatedCaches: true`
-- `globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}']` — явный список для workbox precache
+- `globPatterns: ['**/*.{js,css,ico,png,svg,webp,woff2}']` — явный список для workbox precache
 - Supabase запросы идут `NetworkOnly` через SW — не кэшируются (см. «Write model warning» выше)
 
 Конфиги: `vite.config.ts` (build output + PWA workbox), `netlify.toml` (Cache-Control заголовки).
@@ -163,18 +161,16 @@ This is why Supabase requests are `NetworkOnly` in the SW. **Do not switch to Ne
 iOS Safari **полностью игнорирует** `manifest.webmanifest` иконки при добавлении на home screen. Работает только `<link rel="apple-touch-icon">` в `index.html`.
 
 Требования:
-- `public/apple-touch-icon.png` — **в корне public/**, не в `/icons/`. 180×180, **PNG без альфа-канала** (прозрачные области iOS заливает чёрным — отсюда чёрный квадрат с единственной буквой).
+- `public/icons/apple-touch-icon.png` — 180×180, **PNG без альфа-канала** (прозрачные области iOS заливает чёрным).
 - Фон иконки непрозрачный, цвет `#060d06` (совпадает с `--bg-base`).
 - При обновлении иконки — поднимать `?v=N` в `index.html`, т.к. Safari кэширует apple-touch-icon крайне упорно.
 - Обязательный набор мета-тегов в `index.html`:
   ```html
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=N">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=N">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="OVERSEER">
   ```
-
-Перегенерация иконки — `node scripts/generate-icons.mjs` (использует `sharp`, devDep). Скрипт flatten'ит существующий `public/icons/apple-touch-icon.png` против `#060d06` и кладёт результат в `public/apple-touch-icon.png`. Если нужна новая база — замени файл в `public/icons/`, потом перезапусти скрипт.
 
 ## Принципы разработки
 
@@ -217,3 +213,7 @@ export interface DayPlan { id, date, items: DayItem[], note?, created_at, update
 export interface Template { id, name, created_at }
 export interface TemplateItem { id, template_id, task_id?, type, separator_label?, block, position, task? }
 ```
+## Комментарии и документация
+- Комментарии в коде — только если решение неочевидное, или есть важные нюансы/подводные камни. Не комментировать очевидные вещи.
+- Язык комментариев и документации — английский. 
+- Если где-то встречается русский текст (включая комментарии в коде) — это ошибка, которую нужно исправить. Исправление включает перевод на английский и удаление русского.
