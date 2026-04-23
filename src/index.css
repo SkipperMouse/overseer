@@ -136,30 +136,21 @@ body {
 }
 
 /* ─── Edit-mode drag zone ───────────────────────────────────────── */
-.task-row.edit-mode {
+.drag-handle {
+  touch-action: none;
   cursor: grab;
+  color: var(--text-dim);
+  padding: 2px 8px 2px 2px;
+  margin-left: -6px; /* Align handle neatly inside the row padding */
+  flex-shrink: 0;
+  font-size: 14px;
   user-select: none;
 }
-
-.task-row.edit-mode:active {
+.drag-handle:active {
   cursor: grabbing;
 }
 
-.task-row.edit-mode .task-title,
-.task-row.edit-mode .task-icon,
-.task-row.edit-mode .task-duration,
-.task-row.edit-mode .task-desc-indicator {
-  pointer-events: none;
-}
-
-.task-row.edit-mode .task-check-area {
-  pointer-events: none;
-}
-
-.task-row.edit-mode .checkbox {
-  opacity: 0.35;
-}
-
+/* In edit mode, we can still click the delete button */
 .task-row.edit-mode .pool-del-btn {
   pointer-events: auto;
 }
