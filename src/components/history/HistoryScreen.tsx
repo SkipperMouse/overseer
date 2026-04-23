@@ -10,7 +10,7 @@ function getProgress(plan: DayPlan): { done: number; total: number } {
 }
 
 export default function HistoryScreen() {
-  const { plans, loading, deletePlan } = useHistory()
+  const { plans, loading, loadingMore, hasMore, loadMore, deletePlan } = useHistory()
   const [viewingDate, setViewingDate] = useState<string | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
 
@@ -92,6 +92,15 @@ export default function HistoryScreen() {
               </div>
             )
           })}
+          {hasMore && (
+            <button
+              className="history-load-more"
+              disabled={loadingMore}
+              onClick={loadMore}
+            >
+              {loadingMore ? 'загрузка...' : '// загрузить ещё'}
+            </button>
+          )}
         </div>
       )}
     </div>

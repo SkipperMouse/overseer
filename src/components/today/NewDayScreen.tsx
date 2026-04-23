@@ -6,7 +6,7 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { supabase } from '../../lib/supabase'
 import type { Template, Task, Block } from '../../types'
 import { BLOCKS, BLOCK_LABELS } from '../../lib/blocks'
-import { todayDate } from '../../lib/date'
+import { todayDate, tomorrowDate, formatDate } from '../../lib/date'
 import SectionHeader from './SectionHeader'
 import EmojiPicker from '../tasks/EmojiPicker'
 
@@ -95,6 +95,7 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
 }
 
 export default function NewDayScreen({ onDone }: Props) {
+  const [targetDate, setTargetDate] = useState(todayDate)
   const [step, setStep] = useState<Step>('loading')
   const [templates, setTemplates] = useState<Template[]>([])
   const [allTasks, setAllTasks] = useState<Task[]>([])
@@ -116,8 +117,9 @@ export default function NewDayScreen({ onDone }: Props) {
   )
 
   useEffect(() => {
+    setStep('loading')
     Promise.all([
-      supabase.from('day_plans').select('id').eq('date', todayDate()).maybeSingle(),
+      supabase.from('day_plans').select('id').eq('date', targetDate).maybeSingle(),
       supabase.from('templates').select('*').order('created_at', { ascending: true }),
       supabase.from('tasks').select('*').order('created_at', { ascending: true }),
     ]).then(([planRes, tmplRes, tasksRes]) => {
@@ -137,7 +139,7 @@ export default function NewDayScreen({ onDone }: Props) {
       )
       setStep('pick-template')
     })
-  }, [])
+  }, [targetDate])
 
   async function selectTemplate(tmplId: string | null) {
     if (tmplId === null) {
@@ -278,7 +280,7 @@ export default function NewDayScreen({ onDone }: Props) {
 
       const { error } = await supabase
         .from('day_plans')
-        .insert({ date: todayDate(), items: finalItems, note: '' })
+        .insert({ date: targetDate, items: finalItems, note: '' })
 
       if (error) {
         if (error.code === '23505') {
@@ -314,10 +316,21 @@ export default function NewDayScreen({ onDone }: Props) {
   }
 
   if (step === 'exists') {
+    const isToday = targetDate === todayDate()
     return (
       <div className="new-day-screen">
         <div className="nd-exists">
-          <span className="label-section">план на сегодня уже создан</span>
+          <span className="label-section">
+            план на {isToday ? 'сегодня' : formatDate(targetDate)} уже создан
+          </span>
+          {isToday && (
+            <button
+              className="pool-tag nd-goto-btn"
+              onClick={() => setTargetDate(tomorrowDate())}
+            >
+              создать план на завтра
+            </button>
+          )}
           <button className="pool-tag nd-goto-btn" onClick={onDone}>
             перейти на сегодня
           </button>
@@ -327,10 +340,11 @@ export default function NewDayScreen({ onDone }: Props) {
   }
 
   if (step === 'pick-template') {
+    const dateLabel = targetDate !== todayDate() ? ` — ${formatDate(targetDate)}` : ''
     return (
       <div className="new-day-screen">
         <header className="nd-header">
-          <span className="label-section nd-header-title">новый день</span>
+          <span className="label-section nd-header-title">новый день{dateLabel}</span>
         </header>
         <div className="nd-template-list">
           <div className="prompt-line nd-pick-prompt">{'>'} выбери шаблон</div>
