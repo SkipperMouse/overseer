@@ -88,7 +88,7 @@ Props: `{ date: string, onNewDay?: () => void, onBack?: () => void }`
 
 Two modes:
 - **View mode** — for today: checkbox toggles on click of `task-check-area` (left ~32px of row), description indicator (¶) navigates to `TaskDescriptionScreen`. For historical days: everything readonly. Header has `[ edit ]` button.
-- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within and across blocks. Checkboxes are visually muted and non-interactive in edit mode (`touch-action: none` on rows). Header has `[ done ]` button.
+- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within and across blocks. Checkboxes are visually muted and non-interactive in edit mode (`.task-row.edit-mode .task-check-area { pointer-events: none }`). Header has `[ done ]` button.
 
 Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a single shared `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable; `opacity: 0` when `isDragging` (placeholder stays, clone shown via `DragOverlay`).
 
@@ -119,7 +119,7 @@ Each hook owns its slice of state and exposes optimistic-update mutations:
 
 - **DayView + TemplateEditScreen** (primary edit surfaces, tuned for iOS PWA):
   `MouseSensor { distance: 8 }` + `TouchSensor { delay: 500, tolerance: 8 }` + `KeyboardSensor`.
-  TouchSensor's 500 ms long-press prevents conflict with page scroll on mobile.
+  TouchSensor's 500 ms long-press prevents conflict with page scroll on mobile. **Do not add `touch-action: none` to draggable rows** — delay-based activation already separates scroll from drag; setting `touch-action: none` breaks native panning within long lists. Keep `user-select: none` to suppress iOS long-press selection callout.
 - **NewDayScreen** (draft/build-plan step): `PointerSensor { distance: 8 }` + `KeyboardSensor` — desktop-only flow, no touch-scroll conflict concern.
 
 Both DayView and TemplateEditScreen wrap everything in a single `DndContext` with one `SortableContext` covering all IDs in block order (`morning → day → evening`). `DragOverlay` renders a visible clone via portal while the original is `opacity: 0` during drag — this prevents visual jumps when the item's DOM node moves between block sections.
