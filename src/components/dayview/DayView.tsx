@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, MouseSensor, TouchSensor, KeyboardSensor } from '@dnd-kit/core'
+import { DndContext, DragOverlay, closestCenter, useSensor, useSensors, PointerSensor, KeyboardSensor } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
@@ -117,11 +117,8 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [descTask, setDescTask] = useState<Task | null>(null)
 
-  // MouseSensor: activate after 8px movement (desktop)
-  // TouchSensor: activate after 250ms delay with 5px tolerance (mobile — avoids scroll interference)
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
@@ -316,16 +313,19 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
           </SortableContext>
 
           <DragOverlay dropAnimation={null}>
-            {draggingItem && draggingItem.type === 'task' && (
-              <TaskRow
-                item={draggingItem as TaskItem}
-                hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
-                editMode={true}
-                onToggle={() => {}}
-              />
-            )}
-            {draggingItem && draggingItem.type === 'separator' && (
-              <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
+            {draggingItem && (
+              <div className="drag-overlay-pulse">
+                {draggingItem.type === 'task' ? (
+                  <TaskRow
+                    item={draggingItem as TaskItem}
+                    hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
+                    editMode={true}
+                    onToggle={() => {}}
+                  />
+                ) : (
+                  <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
+                )}
+              </div>
             )}
           </DragOverlay>
         </DndContext>

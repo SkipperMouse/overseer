@@ -88,7 +88,7 @@ Props: `{ date: string, onNewDay?: () => void, onBack?: () => void }`
 
 Two modes:
 - **View mode** — for today: checkbox toggles on click of `task-check-area` (left ~32px of row), description indicator (¶) navigates to `TaskDescriptionScreen`. For historical days: everything readonly. Header has `[ edit ]` button.
-- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within and across blocks. Checkboxes are visually muted and non-interactive in edit mode (`touch-action: none` on rows). Header has `[ done ]` button.
+- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within and across blocks. Drag is initiated only from the dedicated `⠿` handle (`.drag-handle` span rendered by `TaskRow` in edit mode) — rest of the row remains tappable: checkbox still toggles, title click opens description. Header has `[ done ]` button.
 
 Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a single shared `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable; `opacity: 0` when `isDragging` (placeholder stays, clone shown via `DragOverlay`).
 
@@ -105,39 +105,44 @@ One-off tasks have `task_id: null` in the saved JSONB — they never touch the `
 
 Each hook owns its slice of state and exposes optimistic-update mutations:
 
-- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock`, `moveItem` (up/down arrow-key movement, crosses block boundaries), `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Reset loading/plan on date change. `persistItems` is debounced 300 ms.
+- `useDayPlanByDate(date)` — plan for any date + `taskDescIds: Set<string>`; mutations: `toggleItem`, `reorderItems` (single flat `orderedIds` for all blocks), `moveItem` (up/down arrow-key movement, crosses block boundaries), `saveNote`, `removeItem`, `addTaskItem`, `addOneOffTask`. Block field is re-derived from position relative to separators via internal `normalizeItems`. Reset loading/plan on date change. `persistItems` is debounced 300 ms.
 - `canMove(items, id, direction)` — standalone named export from `useDayPlanByDate.ts` (not a hook return value); checks whether an item can move up/down given block boundaries.
 - `useDayPlan` — thin wrapper: `useDayPlanByDate(todayDate())`; re-exports `canMove` from the same module.
 - `useTasks` — task pool; `createTask`, `updateTask`, `deleteTask`, `createDescription`, `updateDescription`
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
-- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock`
+- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock` (per-block `position` integers, explicit block field)
 - `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
 
 ### Drag-and-drop
 
-`@dnd-kit/core` + `@dnd-kit/sortable`. All use `PointerSensor` with `activationConstraint: { distance: 8 }`.
+`@dnd-kit/core` + `@dnd-kit/sortable`. All screens use `PointerSensor { distance: 8 }` + `KeyboardSensor`.
 
-**DayView edit mode + TemplateEditScreen**: single `DndContext` wrapping all blocks. `SortableContext` receives all task IDs in block order (`morning → day → evening`). Cross-block move pattern:
+iOS scroll-vs-drag is handled by a **dedicated drag handle**, not by sensor delay. `TaskRow` (edit mode) renders `<span className="drag-handle">⠿</span>` which receives `attributes`/`listeners` from `useSortable`. `.drag-handle` has `touch-action: none` (browser can't pan from it). The rest of the row has no drag listeners → native scroll works normally within long lists. Do not move the drag listeners back onto the whole row — it reintroduces the scroll-blocks-on-swipe bug.
 
-1. `onDragStart` → set `draggingId` state (activates `DragOverlay`)
-2. `onDragOver` → if `over` item is in a different block than `dragActiveBlockRef.current`, call `moveCrossBlockLocal` and update the ref synchronously. The ref prevents duplicate calls before React state settles between rapid `onDragOver` events.
-3. `onDragEnd` → same block: `reorderBlock`; different block (fast drag fallback): `moveCrossBlock`. Clear refs.
+TemplateEditScreen still uses whole-row-as-handle (`.tmpl-item-row`). Template lists are short, so the scroll issue is less severe there. If template lists grow, refactor to match the dedicated-handle pattern.
 
-`DragOverlay` renders a visible clone via portal; the original item is `opacity: 0` while `isDragging`. This prevents visual jumps when the item's DOM node moves between block sections during drag.
+Both DayView and TemplateEditScreen wrap everything in a single `DndContext` with one `SortableContext` covering all IDs in block order (`morning → day → evening`). `DragOverlay` renders a visible clone via portal while the original is `opacity: 0` during drag — this prevents visual jumps when the item's DOM node moves between block sections.
 
-- `moveCrossBlockLocal(activeId, overId)` — local state update only, no persist. Inserts active before over item, updates `block` field.
-- `moveCrossBlock(activeId, overId)` — same logic + persists to Supabase.
-- `reorderBlock(block, orderedIds)` — rebuilds flat items array (day plans) or recalculates `position` integers (template items) and persists.
+**Two different cross-block patterns — do not confuse them:**
 
-**NewDayScreen** build-plan step still uses one `DndContext` per block (`SortableDraftRow` local component) — cross-block drag not needed in draft mode.
+- **DayView** (flat JSONB `items` array): no `onDragOver`. `onDragEnd` calls `reorderItems(arrayMove(allIds, oldIdx, newIdx))`; the hook's internal `normalizeItems` re-derives each task's `block` field from its position relative to the nearest separator above. Simpler — works because items + separators live in one ordered array.
+- **TemplateEditScreen** (per-block `position` integer): uses `onDragOver` + `moveCrossBlockLocal` + `dragActiveBlockRef` to update block field and visual order live during drag. `onDragEnd` calls `reorderBlock` for same-block or `moveCrossBlock` for cross-block (fast-drag fallback). Needed because template_items has explicit `block` + `position` columns.
 
-In `TemplateEditScreen`, the entire `.tmpl-item-row` is the drag handle. Delete button uses `onPointerDown={e => e.stopPropagation()}` to prevent drag activation.
+**NewDayScreen** build-plan step uses one `DndContext` per block (`SortableDraftRow` local component) — cross-block drag not supported in draft mode.
+
+In `TemplateEditScreen`, the entire `.tmpl-item-row` is the drag handle. Delete button uses `onPointerDown={e => e.stopPropagation()}` to prevent drag activation. Same pattern applies to checkboxes in DayView edit mode (`.task-row.edit-mode .task-check-area { pointer-events: none }` disables toggle entirely in edit mode).
 
 ### Optimistic updates pattern
 
 Every mutation: update local state first → fire Supabase query → revert on error (or replace temp UUID with real one on insert).
 
 Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real row.
+
+### Write model warning — destructive full-array overwrite
+
+**Critical invariant.** Mutations on `day_plans.items` (and template items to a lesser degree) all build a new full array and send `update({ items })` to Supabase — no optimistic locking, no `updated_at` compare-and-swap, no patch/merge. Any **stale read** on the client → the client writes its stale array back → newer server state (from another device/session) is silently lost.
+
+This is why Supabase requests are `NetworkOnly` in the SW. **Do not switch to NetworkFirst / StaleWhileRevalidate / CacheFirst for `*.supabase.co`** — even a short cache TTL creates a data-loss window. If offline reads become a real requirement, the fix is write-side (add optimistic-lock column + CAS in `persistItems`, or pull-before-write in each mutation), not read-side caching.
 
 ## Деплой и кэширование
 
@@ -146,9 +151,28 @@ Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real
 - `dist/assets/*` — содержат хэш в имени файла (Rollup `[name]-[hash]`), кэшируются 1 год (`immutable`)
 - `index.html`, `sw.js`, `manifest.webmanifest` — `no-cache, no-store` (всегда свежие)
 - Service Worker: `registerType: 'autoUpdate'`, `skipWaiting: true`, `clientsClaim: true`, `cleanupOutdatedCaches: true`
-- Supabase запросы идут `NetworkOnly` через SW — не кэшируются
+- `globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}']` — явный список для workbox precache
+- Supabase запросы идут `NetworkOnly` через SW — не кэшируются (см. «Write model warning» выше)
 
 Конфиги: `vite.config.ts` (build output + PWA workbox), `netlify.toml` (Cache-Control заголовки).
+
+## iOS PWA — иконки и мета-теги
+
+iOS Safari **полностью игнорирует** `manifest.webmanifest` иконки при добавлении на home screen. Работает только `<link rel="apple-touch-icon">` в `index.html`.
+
+Требования:
+- `public/apple-touch-icon.png` — **в корне public/**, не в `/icons/`. 180×180, **PNG без альфа-канала** (прозрачные области iOS заливает чёрным — отсюда чёрный квадрат с единственной буквой).
+- Фон иконки непрозрачный, цвет `#060d06` (совпадает с `--bg-base`).
+- При обновлении иконки — поднимать `?v=N` в `index.html`, т.к. Safari кэширует apple-touch-icon крайне упорно.
+- Обязательный набор мета-тегов в `index.html`:
+  ```html
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=N">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="OVERSEER">
+  ```
+
+Перегенерация иконки — `node scripts/generate-icons.mjs` (использует `sharp`, devDep). Скрипт flatten'ит существующий `public/icons/apple-touch-icon.png` против `#060d06` и кладёт результат в `public/apple-touch-icon.png`. Если нужна новая база — замени файл в `public/icons/`, потом перезапусти скрипт.
 
 ## Принципы разработки
 
