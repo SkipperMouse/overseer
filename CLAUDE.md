@@ -26,7 +26,7 @@ If the branch name already exists, generate a different slug — do not add nume
 
 ### Constraints
 - No `git fetch`, no `git pull` — repository state is managed manually
-- No commits, no pushes — only branch creation and file changes
+- Ask before commit and push
 - If no branch has been created yet in the session and a task begins, create the branch before making any changes
 
 ## Commands
