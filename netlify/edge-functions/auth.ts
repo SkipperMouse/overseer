@@ -1,6 +1,12 @@
 import type { Context } from "@netlify/edge-functions";
 
+const STATIC_EXTENSIONS = /\.(png|jpg|jpeg|svg|webp|ico|woff2|js|css|webmanifest)(\?.*)?$/i
+
 export default async function auth(request: Request, context: Context) {
+  if (STATIC_EXTENSIONS.test(new URL(request.url).pathname)) {
+    return context.next()
+  }
+
   const username = Netlify.env.get("AUTH_USERNAME") ?? "overseer";
   const password = Netlify.env.get("AUTH_PASSWORD");
 

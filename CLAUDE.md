@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Технический долг и задачи аудита** — см. [`TECHDEBT.md`](./TECHDEBT.md). Исправляем по порядку.
+
 ## Git Workflow
 
 At the start of each session, unless a specific branch is already specified, create a new branch from the current local `main`.
