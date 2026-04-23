@@ -217,3 +217,7 @@ export interface DayPlan { id, date, items: DayItem[], note?, created_at, update
 export interface Template { id, name, created_at }
 export interface TemplateItem { id, template_id, task_id?, type, separator_label?, block, position, task? }
 ```
+## Комментарии и документация
+- Комментарии в коде — только если решение неочевидное, или есть важные нюансы/подводные камни. Не комментировать очевидные вещи.
+- Язык комментариев и документации — английский. 
+- Если где-то встречается русский текст (включая комментарии в коде) — это ошибка, которую нужно исправить. Исправление включает перевод на английский и удаление русского.
