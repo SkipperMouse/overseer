@@ -24,19 +24,13 @@ export default function TaskRow({
     >
       <div
         className="task-check-area"
-        onClick={e => {
-          e.stopPropagation()
-          // Allow checking/unchecking in both modes.
-          onToggle()
-        }}
+        onClick={e => { e.stopPropagation(); onToggle() }}
       >
         <input
           type="checkbox"
           className="checkbox"
           checked={item.checked}
-          readOnly // We handle the toggle on the parent div click.
-          onClick={e => e.stopPropagation()}
-          onPointerDown={e => e.stopPropagation()}
+          readOnly
         />
       </div>
 
@@ -54,7 +48,7 @@ export default function TaskRow({
         <span className="task-icon pip-emoji">{item.icon}</span>
       )}
 
-      <span className="task-title" onClick={e => { e.stopPropagation(); onDescClick?.() }}>{item.title}</span>
+      <span className="task-title">{item.title}</span>
 
       {item.duration && (
         <span className="task-duration">{item.duration}m</span>
