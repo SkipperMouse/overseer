@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { BLOCKS } from '../lib/blocks'
 import type { DayPlan, DayItem, TaskItem, Task, Block } from '../types'
 
 interface RawDescRow {
   task_id: string
 }
 
-const BLOCKS: Block[] = ['morning', 'day', 'evening']
 function nextBlock(b: Block): Block | null {
   const i = BLOCKS.indexOf(b); return i < BLOCKS.length - 1 ? BLOCKS[i + 1] : null
 }

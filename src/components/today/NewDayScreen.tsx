@@ -5,20 +5,10 @@ import { CSS } from '@dnd-kit/utilities'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { supabase } from '../../lib/supabase'
 import type { Template, Task, Block } from '../../types'
+import { BLOCKS, BLOCK_LABELS } from '../../lib/blocks'
+import { todayDate } from '../../lib/date'
 import SectionHeader from './SectionHeader'
 import EmojiPicker from '../tasks/EmojiPicker'
-
-function todayDate() {
-  return new Date().toLocaleDateString('en-CA')
-}
-
-const BLOCKS: Block[] = ['morning', 'day', 'evening']
-
-const BLOCK_LABELS: Record<Block, string> = {
-  morning: '[ утро ]',
-  day: '[ работа ]',
-  evening: '[ вечер ]',
-}
 
 interface DraftTaskItem {
   id: string

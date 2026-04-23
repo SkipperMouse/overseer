@@ -1732,3 +1732,11 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 16px;
+  color: var(--text-dim);
+}

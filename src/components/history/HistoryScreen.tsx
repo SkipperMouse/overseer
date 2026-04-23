@@ -2,12 +2,7 @@ import { useState } from 'react'
 import { useHistory } from '../../hooks/useHistory'
 import TodayScreen from '../today/TodayScreen'
 import type { DayPlan, TaskItem } from '../../types'
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString('ru-RU', { weekday: 'short', day: '2-digit', month: 'short' })
-}
+import { formatDate } from '../../lib/date'
 
 function getProgress(plan: DayPlan): { done: number; total: number } {
   const tasks = plan.items.filter((i): i is TaskItem => i.type === 'task')
