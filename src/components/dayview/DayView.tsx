@@ -85,7 +85,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const isToday = date === todayDate()
 
   const {
-    plan, loading, taskDescIds,
+    plan, loading, taskDescIds, writeConflict,
     toggleItem, reorderItems, saveNote, removeItem, addTaskItem, addOneOffTask,
   } = useDayPlanByDate(date)
   const { tasks: allTasks, updateDescription } = useTasks()
@@ -220,6 +220,11 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
   return (
     <div className="day-view-screen">
+      {writeConflict && (
+        <div className="day-view-conflict-banner">
+          данные обновлены с другого устройства — план перезагружен
+        </div>
+      )}
       {showEmojiPicker && (
         <EmojiPicker
           onSelect={em => { setOnetimeIcon(em); setShowEmojiPicker(false) }}

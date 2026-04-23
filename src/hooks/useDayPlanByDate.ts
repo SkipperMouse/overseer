@@ -14,7 +14,6 @@ function prevBlock(b: Block): Block | null {
   const i = BLOCKS.indexOf(b); return i > 0 ? BLOCKS[i - 1] : null
 }
 
-/** Вычисляет block для элемента по индексу — ближайший сепаратор сверху. */
 function deriveBlock(items: DayItem[], idx: number): Block {
   for (let i = idx - 1; i >= 0; i--) {
     if (items[i].type === 'separator') return items[i].block
@@ -22,7 +21,6 @@ function deriveBlock(items: DayItem[], idx: number): Block {
   return 'morning'
 }
 
-/** Перезаписывает поле block у всех TaskItem по их позиции относительно сепараторов. */
 function normalizeItems(items: DayItem[]): DayItem[] {
   return items.map((item, idx) =>
     item.type === 'task' ? { ...item, block: deriveBlock(items, idx) } : item
@@ -45,57 +43,80 @@ export function useDayPlanByDate(date: string) {
   const [plan, setPlan] = useState<DayPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [taskDescIds, setTaskDescIds] = useState<Set<string>>(new Set())
+  const [writeConflict, setWriteConflict] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setLoading(true)
-      setPlan(null)
-      setTaskDescIds(new Set())
-
-      const { data, error } = await supabase
-        .from('day_plans')
-        .select('*')
-        .eq('date', date)
-        .maybeSingle()
-      if (cancelled) return
-      if (error) console.error(error)
-      const planData = (data as DayPlan) ?? null
-      setPlan(planData)
-
-      if (planData) {
-        const taskIds = planData.items
-          .filter((i): i is TaskItem => i.type === 'task' && !!i.task_id)
-          .map(i => i.task_id as string)
-        if (taskIds.length > 0) {
-          const { data: descs } = await supabase
-            .from('task_descriptions')
-            .select('task_id')
-            .in('task_id', taskIds)
-          if (cancelled) return
-          setTaskDescIds(new Set(((descs ?? []) as RawDescRow[]).map(d => d.task_id)))
-        }
-      }
-      if (!cancelled) setLoading(false)
-    }
-    load()
-    return () => { cancelled = true }
-  }, [date])
-
+  // Tracks the updated_at we last read/wrote — used for CAS on persistItems
+  const updatedAtRef = useRef<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPersistRef = useRef<{ planId: string; items: DayItem[] } | null>(null)
+
+  const loadPlan = useCallback(async (signal: { cancelled: boolean }) => {
+    setLoading(true)
+    setPlan(null)
+    setTaskDescIds(new Set())
+    setWriteConflict(false)
+    updatedAtRef.current = null
+
+    const { data, error } = await supabase
+      .from('day_plans')
+      .select('*')
+      .eq('date', date)
+      .maybeSingle()
+    if (signal.cancelled) return
+    if (error) console.error(error)
+    const planData = (data as DayPlan) ?? null
+    if (planData) updatedAtRef.current = planData.updated_at
+    setPlan(planData)
+
+    if (planData) {
+      const taskIds = planData.items
+        .filter((i): i is TaskItem => i.type === 'task' && !!i.task_id)
+        .map(i => i.task_id as string)
+      if (taskIds.length > 0) {
+        const { data: descs } = await supabase
+          .from('task_descriptions')
+          .select('task_id')
+          .in('task_id', taskIds)
+        if (signal.cancelled) return
+        setTaskDescIds(new Set(((descs ?? []) as RawDescRow[]).map(d => d.task_id)))
+      }
+    }
+    if (!signal.cancelled) setLoading(false)
+  }, [date])
+
+  useEffect(() => {
+    const signal = { cancelled: false }
+    loadPlan(signal)
+    return () => { signal.cancelled = true }
+  }, [loadPlan])
 
   const persistItems = useCallback((planId: string, items: DayItem[]) => {
     pendingPersistRef.current = { planId, items }
     if (debounceRef.current !== null) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
+    debounceRef.current = setTimeout(async () => {
       debounceRef.current = null
       pendingPersistRef.current = null
-      supabase.from('day_plans').update({ items }).eq('id', planId)
-        .then(({ error }) => { if (error) console.error(error) })
+
+      const knownAt = updatedAtRef.current
+      // CAS: match updated_at to detect concurrent writes from other devices
+      const query = supabase.from('day_plans').update({ items }).eq('id', planId)
+      const { data, error } = knownAt !== null
+        ? await query.eq('updated_at', knownAt).select('updated_at').maybeSingle()
+        : await query.select('updated_at').maybeSingle()
+
+      if (error) { console.error(error); return }
+
+      if (data === null && knownAt !== null) {
+        // 0 rows matched: remote write happened since our last read — reload
+        console.warn('Write conflict detected on day_plans, reloading')
+        pendingPersistRef.current = null
+        loadPlan({ cancelled: false })
+        setWriteConflict(true)
+      } else if (data) {
+        updatedAtRef.current = (data as { updated_at: string }).updated_at
+      }
     }, 300)
-  }, [])
+  }, [loadPlan])
 
   // Flush any pending debounced write when date changes or component unmounts
   useEffect(() => {
@@ -127,10 +148,6 @@ export function useDayPlanByDate(date: string) {
     })
   }, [persistItems])
 
-  /**
-   * Принимает новый порядок всех id (tasks + separators),
-   * перестраивает массив items и нормализует поля block у задач.
-   */
   const reorderItems = useCallback((orderedIds: string[]) => {
     setPlan(prev => {
       if (!prev) return prev
@@ -216,7 +233,6 @@ export function useDayPlanByDate(date: string) {
     setPlan(prev => {
       if (!prev) return prev
       const items = [...prev.items]
-      // Найти сепаратор этого блока, затем следующий сепаратор — вставить перед ним (или в конец)
       const sepIdx = items.findIndex(i => i.type === 'separator' && i.block === block)
       const nextSepIdx = sepIdx === -1
         ? -1
@@ -278,6 +294,7 @@ export function useDayPlanByDate(date: string) {
     plan,
     loading,
     taskDescIds,
+    writeConflict,
     toggleItem,
     moveItem,
     reorderItems,
