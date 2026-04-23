@@ -117,11 +117,9 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [descTask, setDescTask] = useState<Task | null>(null)
 
-  // MouseSensor: activate after 8px movement (desktop)
-  // TouchSensor: activate after 250ms delay with 5px tolerance (mobile — avoids scroll interference)
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
