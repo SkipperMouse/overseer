@@ -335,6 +335,7 @@ export default function TaskPoolScreen() {
           ))}
         </div>
       )}
+      <div className="pool-version">[ v{__APP_VERSION__} ]</div>
     </div>
   )
 }
