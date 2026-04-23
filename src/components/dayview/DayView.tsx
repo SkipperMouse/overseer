@@ -314,16 +314,19 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
           </SortableContext>
 
           <DragOverlay dropAnimation={null}>
-            {draggingItem && draggingItem.type === 'task' && (
-              <TaskRow
-                item={draggingItem as TaskItem}
-                hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
-                editMode={true}
-                onToggle={() => {}}
-              />
-            )}
-            {draggingItem && draggingItem.type === 'separator' && (
-              <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
+            {draggingItem && (
+              <div className="drag-overlay-pulse">
+                {draggingItem.type === 'task' ? (
+                  <TaskRow
+                    item={draggingItem as TaskItem}
+                    hasDesc={(draggingItem as TaskItem).task_id ? taskDescIds.has((draggingItem as TaskItem).task_id!) : false}
+                    editMode={true}
+                    onToggle={() => {}}
+                  />
+                ) : (
+                  <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
+                )}
+              </div>
             )}
           </DragOverlay>
         </DndContext>

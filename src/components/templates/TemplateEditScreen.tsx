@@ -319,16 +319,18 @@ export default function TemplateEditScreen({ template, onBack }: Props) {
                 const item = items.find(i => i.id === draggingId)
                 if (!item) return null
                 return (
-                  <div className="tmpl-item-row">
-                    {item.type === 'separator' ? (
-                      <span className="tmpl-item-sep-label text-muted">— {item.separator_label}</span>
-                    ) : (
-                      <>
-                        {item.task?.icon && <span className="task-icon pip-emoji">{item.task.icon}</span>}
-                        <span className="tmpl-item-title">{item.task?.title ?? '?'}</span>
-                        {item.task?.duration && <span className="task-duration">{item.task.duration}m</span>}
-                      </>
-                    )}
+                  <div className="drag-overlay-pulse">
+                    <div className="tmpl-item-row">
+                      {item.type === 'separator' ? (
+                        <span className="tmpl-item-sep-label text-muted">— {item.separator_label}</span>
+                      ) : (
+                        <>
+                          {item.task?.icon && <span className="task-icon pip-emoji">{item.task.icon}</span>}
+                          <span className="tmpl-item-title">{item.task?.title ?? '?'}</span>
+                          {item.task?.duration && <span className="task-duration">{item.task.duration}m</span>}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )
               })()}
