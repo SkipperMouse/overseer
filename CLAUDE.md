@@ -80,8 +80,6 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 **Adding a new top-level screen** requires four changes: new hook + component under `src/components/<name>/`, CSS section in `src/index.css`, import + render in `App.tsx`, and adding the id to `NAV_ITEMS` in `BottomNav.tsx` (also update the `Screen` type there).
 
-`src/components/templates/TemplatesScreen.tsx` and `TemplateListScreen.tsx` are not wired into `App.tsx` — they are dead code (replaced by `TaskPoolScreen` hosting templates inline).
-
 ### DayView component
 
 `src/components/dayview/DayView.tsx` is the universal day display/edit component used by both TodayScreen and HistoryScreen.
@@ -153,7 +151,7 @@ This is why Supabase requests are `NetworkOnly` in the SW. **Do not switch to Ne
 - `dist/assets/*` — содержат хэш в имени файла (Rollup `[name]-[hash]`), кэшируются 1 год (`immutable`)
 - `index.html`, `sw.js`, `manifest.webmanifest` — `no-cache, no-store` (всегда свежие)
 - Service Worker: `registerType: 'autoUpdate'`, `skipWaiting: true`, `clientsClaim: true`, `cleanupOutdatedCaches: true`
-- `globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}']` — явный список для workbox precache
+- `globPatterns: ['**/*.{js,css,ico,png,svg,webp,woff2}']` — явный список для workbox precache
 - Supabase запросы идут `NetworkOnly` через SW — не кэшируются (см. «Write model warning» выше)
 
 Конфиги: `vite.config.ts` (build output + PWA workbox), `netlify.toml` (Cache-Control заголовки).
@@ -163,18 +161,16 @@ This is why Supabase requests are `NetworkOnly` in the SW. **Do not switch to Ne
 iOS Safari **полностью игнорирует** `manifest.webmanifest` иконки при добавлении на home screen. Работает только `<link rel="apple-touch-icon">` в `index.html`.
 
 Требования:
-- `public/apple-touch-icon.png` — **в корне public/**, не в `/icons/`. 180×180, **PNG без альфа-канала** (прозрачные области iOS заливает чёрным — отсюда чёрный квадрат с единственной буквой).
+- `public/icons/apple-touch-icon.png` — 180×180, **PNG без альфа-канала** (прозрачные области iOS заливает чёрным).
 - Фон иконки непрозрачный, цвет `#060d06` (совпадает с `--bg-base`).
 - При обновлении иконки — поднимать `?v=N` в `index.html`, т.к. Safari кэширует apple-touch-icon крайне упорно.
 - Обязательный набор мета-тегов в `index.html`:
   ```html
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=N">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=N">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="OVERSEER">
   ```
-
-Перегенерация иконки — `node scripts/generate-icons.mjs` (использует `sharp`, devDep). Скрипт flatten'ит существующий `public/icons/apple-touch-icon.png` против `#060d06` и кладёт результат в `public/apple-touch-icon.png`. Если нужна новая база — замени файл в `public/icons/`, потом перезапусти скрипт.
 
 ## Принципы разработки
 

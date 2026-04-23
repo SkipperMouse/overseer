@@ -150,7 +150,11 @@ body {
   cursor: grabbing;
 }
 
-/* In edit mode, we can still click the delete button */
+/* In edit mode, disable checkbox toggle; delete button stays clickable */
+.task-row.edit-mode .task-check-area {
+  pointer-events: none;
+}
+
 .task-row.edit-mode .pool-del-btn {
   pointer-events: auto;
 }
