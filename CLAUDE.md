@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Git Workflow
 
-At the start of each session, unless a specific branch is already specified, create a new branch from the current local `main`.
+At the start of each session, unless a specific branch is already specified, create a new branch from the current local `feature-[Latest Number]`.
 
 ### Branch naming
 - New feature or general task: `feat/YYYYMMDD-<slug>`
@@ -16,7 +16,7 @@ Examples: `feat/20260412-user-auth-flow`, `fix/20260412-null-pointer-login`
 
 ### Procedure
 ```bash
-git checkout main
+git checkout feature-1 
 git checkout -b <branch-name>
 ```
 
