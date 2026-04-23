@@ -84,17 +84,34 @@ export function useDayPlanByDate(date: string) {
   }, [date])
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingPersistRef = useRef<{ planId: string; items: DayItem[] } | null>(null)
 
   const persistItems = useCallback((planId: string, items: DayItem[]) => {
-    if (debounceRef.current !== null) {
-      clearTimeout(debounceRef.current)
-    }
-    debounceRef.current = setTimeout(async () => {
+    pendingPersistRef.current = { planId, items }
+    if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
       debounceRef.current = null
-      const { error } = await supabase.from('day_plans').update({ items }).eq('id', planId)
-      if (error) console.error(error)
+      pendingPersistRef.current = null
+      supabase.from('day_plans').update({ items }).eq('id', planId)
+        .then(({ error }) => { if (error) console.error(error) })
     }, 300)
   }, [])
+
+  // Flush any pending debounced write when date changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current !== null) {
+        clearTimeout(debounceRef.current)
+        debounceRef.current = null
+      }
+      if (pendingPersistRef.current !== null) {
+        const { planId, items } = pendingPersistRef.current
+        pendingPersistRef.current = null
+        supabase.from('day_plans').update({ items }).eq('id', planId)
+          .then(({ error }) => { if (error) console.error(error) })
+      }
+    }
+  }, [date])
 
   const toggleItem = useCallback((id: string) => {
     setPlan(prev => {

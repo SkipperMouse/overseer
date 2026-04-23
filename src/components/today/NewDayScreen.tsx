@@ -292,7 +292,7 @@ export default function NewDayScreen({ onDone }: Props) {
 
       if (error) {
         if (error.code === '23505') {
-          onDone()
+          setSaveError('план на сегодня уже создан с другого устройства — твои данные не сохранены')
           return
         }
         console.error(error)

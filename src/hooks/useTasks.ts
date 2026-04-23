@@ -99,12 +99,16 @@ export function useTasks() {
       .single()
 
     if (error) {
+      if (error.code !== '23505') {
+        console.error(error)
+        return null
+      }
       const { data: existing, error: fetchError } = await supabase
         .from('task_descriptions')
         .select()
         .eq('task_id', taskId)
         .single()
-      if (fetchError || !existing) { console.error(error); return null }
+      if (fetchError || !existing) { console.error(fetchError ?? error); return null }
       const desc = existing as TaskDescription
       setTasks(prev => prev.map(t => t.id === taskId ? { ...t, description: desc } : t))
       return desc

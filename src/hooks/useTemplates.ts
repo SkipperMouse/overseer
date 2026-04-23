@@ -206,6 +206,8 @@ export function useTemplateItems(templateId: string) {
   }, [])
 
   const moveCrossBlock = useCallback(async (activeId: string, overId: string) => {
+    let dbUpdates: Array<{ id: string; block: Block; position: number }> = []
+
     setItems(prev => {
       const activeItem = prev.find(i => i.id === activeId)
       const overItem = prev.find(i => i.id === overId)
@@ -218,15 +220,15 @@ export function useTemplateItems(templateId: string) {
       const insertAt = overIdx >= 0 ? overIdx : targetItems.length
       targetItems.splice(insertAt, 0, { ...activeItem, block: targetBlock })
       const posMap = new Map(targetItems.map((item, idx) => [item.id, idx]))
-      ;(async () => {
-        await Promise.all(
-          targetItems.map((item, idx) =>
-            supabase.from('template_items').update({ block: targetBlock, position: idx }).eq('id', item.id)
-          )
-        )
-      })()
+      dbUpdates = targetItems.map((item, idx) => ({ id: item.id, block: targetBlock, position: idx }))
       return prev.map(i => posMap.has(i.id) ? { ...i, block: targetBlock, position: posMap.get(i.id)! } : i)
     })
+
+    await Promise.all(
+      dbUpdates.map(({ id, block, position }) =>
+        supabase.from('template_items').update({ block, position }).eq('id', id)
+      )
+    )
   }, [])
 
   const reorderBlock = useCallback(async (_block: Block, orderedIds: string[]) => {
