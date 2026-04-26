@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useTasks } from '../../hooks/useTasks'
 import { useTemplates } from '../../hooks/useTemplates'
 import type { Task, Template } from '../../types'
@@ -29,9 +29,6 @@ export default function TaskPoolScreen() {
   const [newDuration, setNewDuration] = useState('0')
   const [newIcon, setNewIcon] = useState('')
   const [pickerFor, setPickerFor] = useState<string | null>(null)
-  const [editTitleId, setEditTitleId] = useState<string | null>(null)
-  const [editDurId, setEditDurId] = useState<string | null>(null)
-  const [delConfirmId, setDelConfirmId] = useState<string | null>(null)
   const [descTask, setDescTask] = useState<Task | null>(null)
 
   // ── Search ──────────────────────────────────────────────────────────────────
@@ -162,7 +159,9 @@ export default function TaskPoolScreen() {
               {tmplDelConfirmId === tmpl.id ? (
                 <button
                   className="pool-del-btn pool-del-confirm"
+                  autoFocus
                   onClick={() => { deleteTemplate(tmpl.id); setTmplDelConfirmId(null) }}
+                  onBlur={() => setTmplDelConfirmId(null)}
                 >удалить?</button>
               ) : (
                 <button className="pool-del-btn" onClick={() => setTmplDelConfirmId(tmpl.id)}>×</button>
@@ -179,13 +178,7 @@ export default function TaskPoolScreen() {
             <PoolTaskRow
               key={task.id}
               task={task}
-              editTitleId={editTitleId}
-              editDurId={editDurId}
-              delConfirmId={delConfirmId}
               pickerFor={pickerFor}
-              setEditTitleId={setEditTitleId}
-              setEditDurId={setEditDurId}
-              setDelConfirmId={setDelConfirmId}
               setPickerFor={setPickerFor}
               updateTask={updateTask}
               deleteTask={deleteTask}
@@ -319,13 +312,7 @@ export default function TaskPoolScreen() {
             <PoolTaskRow
               key={task.id}
               task={task}
-              editTitleId={editTitleId}
-              editDurId={editDurId}
-              delConfirmId={delConfirmId}
               pickerFor={pickerFor}
-              setEditTitleId={setEditTitleId}
-              setEditDurId={setEditDurId}
-              setDelConfirmId={setDelConfirmId}
               setPickerFor={setPickerFor}
               updateTask={updateTask}
               deleteTask={deleteTask}
@@ -342,13 +329,7 @@ export default function TaskPoolScreen() {
 
 interface PoolTaskRowProps {
   task: Task
-  editTitleId: string | null
-  editDurId: string | null
-  delConfirmId: string | null
   pickerFor: string | null
-  setEditTitleId: (id: string | null) => void
-  setEditDurId: (id: string | null) => void
-  setDelConfirmId: (id: string | null) => void
   setPickerFor: (id: string | null) => void
   updateTask: (id: string, fields: Partial<{ title: string; duration: string | undefined; icon: string | undefined }>) => void
   deleteTask: (id: string) => void
@@ -357,10 +338,15 @@ interface PoolTaskRowProps {
 }
 
 function PoolTaskRow({
-  task, editTitleId, editDurId, delConfirmId, pickerFor,
-  setEditTitleId, setEditDurId, setDelConfirmId, setPickerFor,
-  updateTask, deleteTask, handleOpenDesc, handleAddDesc,
+  task, pickerFor, setPickerFor, updateTask, deleteTask, handleOpenDesc, handleAddDesc,
 }: PoolTaskRowProps) {
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [isEditingDur, setIsEditingDur] = useState(false)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+
+  const openTitle = useCallback(() => { setIsEditingTitle(true); setIsEditingDur(false) }, [])
+  const openDur = useCallback(() => { setIsEditingDur(true); setIsEditingTitle(false) }, [])
+
   return (
     <div className="pool-item">
       {/* Icon */}
@@ -373,7 +359,7 @@ function PoolTaskRow({
       </button>
 
       {/* Title — inline edit */}
-      {editTitleId === task.id ? (
+      {isEditingTitle ? (
         <input
           className="pool-input pool-input-title"
           defaultValue={task.title}
@@ -381,25 +367,21 @@ function PoolTaskRow({
           onBlur={e => {
             const val = e.target.value.trim()
             if (val && val !== task.title) updateTask(task.id, { title: val })
-            setEditTitleId(null)
+            setIsEditingTitle(false)
           }}
           onKeyDown={e => {
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-            if (e.key === 'Escape') setEditTitleId(null)
+            if (e.key === 'Escape') setIsEditingTitle(false)
           }}
         />
       ) : (
-        <span
-          className="pool-item-title"
-          onClick={() => { setEditTitleId(task.id); setEditDurId(null) }}
-          title="редактировать"
-        >
+        <span className="pool-item-title" onClick={openTitle} title="редактировать">
           {task.title}
         </span>
       )}
 
       {/* Duration — inline edit */}
-      {editDurId === task.id ? (
+      {isEditingDur ? (
         <input
           className="pool-input pool-input-dur"
           type="number"
@@ -410,59 +392,42 @@ function PoolTaskRow({
           onBlur={e => {
             const rounded = String(Math.round(Number(e.target.value || '0') / 10) * 10)
             updateTask(task.id, { duration: rounded !== '0' ? rounded : undefined })
-            setEditDurId(null)
+            setIsEditingDur(false)
           }}
           onKeyDown={e => {
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-            if (e.key === 'Escape') setEditDurId(null)
+            if (e.key === 'Escape') setIsEditingDur(false)
           }}
         />
       ) : (
-        <span
-          className="pool-item-dur"
-          onClick={() => { setEditDurId(task.id); setEditTitleId(null) }}
-          title="редактировать"
-        >
+        <span className="pool-item-dur" onClick={openDur} title="редактировать">
           {task.duration ? task.duration + 'm' : <span className="text-dim">--</span>}
         </span>
       )}
 
       {/* Description indicator */}
       {task.description ? (
-        <button
-          className="pool-desc-btn has-desc"
-          onClick={() => handleOpenDesc(task)}
-          title="открыть описание"
-        >
+        <button className="pool-desc-btn has-desc" onClick={() => handleOpenDesc(task)} title="открыть описание">
           ¶
         </button>
       ) : (
-        <button
-          className="pool-desc-btn no-desc"
-          onClick={() => handleAddDesc(task)}
-          title="добавить описание"
-        >
+        <button className="pool-desc-btn no-desc" onClick={() => handleAddDesc(task)} title="добавить описание">
           +doc
         </button>
       )}
 
       {/* Delete */}
-      {delConfirmId === task.id ? (
+      {isConfirmingDelete ? (
         <button
           className="pool-del-btn pool-del-confirm"
           autoFocus
-          onClick={() => { deleteTask(task.id); setDelConfirmId(null) }}
-          onBlur={() => setDelConfirmId(null)}
+          onClick={() => { deleteTask(task.id); setIsConfirmingDelete(false) }}
+          onBlur={() => setIsConfirmingDelete(false)}
         >
           sure?
         </button>
       ) : (
-        <button
-          className="pool-del-btn"
-          onClick={() => setDelConfirmId(task.id)}
-        >
-          ×
-        </button>
+        <button className="pool-del-btn" onClick={() => setIsConfirmingDelete(true)}>×</button>
       )}
     </div>
   )

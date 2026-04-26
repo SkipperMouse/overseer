@@ -5,17 +5,12 @@ import { CSS } from '@dnd-kit/utilities'
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core'
 import { useTemplateItems } from '../../hooks/useTemplates'
 import type { Template, TemplateItem, Block, Task } from '../../types'
+import { BLOCK_DEFS as BLOCKS } from '../../lib/blocks'
 
 interface Props {
   template: Template
   onBack: () => void
 }
-
-const BLOCKS: { key: Block; label: string }[] = [
-  { key: 'morning', label: '[ утро ]' },
-  { key: 'day',     label: '[ работа ]' },
-  { key: 'evening', label: '[ вечер ]' },
-]
 
 interface TaskPickerProps {
   tasks: Task[]

@@ -5,6 +5,8 @@ import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { useDayPlanByDate } from '../../hooks/useDayPlanByDate'
 import { useTasks } from '../../hooks/useTasks'
 import type { Task, TaskItem, SeparatorItem, Block } from '../../types'
+import { BLOCKS, BLOCK_LABELS } from '../../lib/blocks'
+import { todayDate, formatDate } from '../../lib/date'
 import SectionHeader from '../today/SectionHeader'
 import TaskRow from '../today/TaskRow'
 import SortableTaskRow from '../today/SortableTaskRow'
@@ -15,24 +17,6 @@ import TaskDescriptionScreen from '../tasks/TaskDescriptionScreen'
 type PendingAdd =
   | { kind: 'pool'; task: Task }
   | { kind: 'onetime'; title: string; duration?: string; icon?: string }
-
-const BLOCKS: Block[] = ['morning', 'day', 'evening']
-const BLOCK_LABELS: Record<Block, string> = {
-  morning: '[ утро ]',
-  day: '[ работа ]',
-  evening: '[ вечер ]',
-}
-
-function todayDate() {
-  return new Date().toLocaleDateString('en-CA')
-}
-
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' })
-    .replace(/\.$/, '')
-}
 
 interface NoteAreaProps {
   initialValue: string
@@ -101,7 +85,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const isToday = date === todayDate()
 
   const {
-    plan, loading, taskDescIds,
+    plan, loading, taskDescIds, writeConflict,
     toggleItem, reorderItems, saveNote, removeItem, addTaskItem, addOneOffTask,
   } = useDayPlanByDate(date)
   const { tasks: allTasks, updateDescription } = useTasks()
@@ -236,6 +220,11 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
   return (
     <div className="day-view-screen">
+      {writeConflict && (
+        <div className="day-view-conflict-banner">
+          данные обновлены с другого устройства — план перезагружен
+        </div>
+      )}
       {showEmojiPicker && (
         <EmojiPicker
           onSelect={em => { setOnetimeIcon(em); setShowEmojiPicker(false) }}
