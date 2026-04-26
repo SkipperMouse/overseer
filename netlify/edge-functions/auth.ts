@@ -1,9 +1,15 @@
 import type { Context } from "@netlify/edge-functions";
 
-const STATIC_EXTENSIONS = /\.(png|jpg|jpeg|svg|webp|ico|woff2|js|css|webmanifest)(\?.*)?$/i
+// Public paths — resources fetched outside an authenticated Safari session:
+// - /icons/* — iOS Springboard on Add to Home Screen, PWA install
+// - /apple-touch-icon(-precomposed).png — iOS root probe outside the authenticated tab
+// - /favicon.* — tab render before login
+// - /manifest.webmanifest — PWA install flow
+// Everything else (JS/CSS/WOFF2/sw.js) stays behind Basic Auth — anon key is in the JS bundle.
+const PUBLIC_PATHS = /^\/(icons\/[^/]+\.(png|svg|webp)|apple-touch-icon(-precomposed)?\.png|favicon\.(svg|ico)|manifest\.webmanifest)(\?.*)?$/
 
 export default async function auth(request: Request, context: Context) {
-  if (STATIC_EXTENSIONS.test(new URL(request.url).pathname)) {
+  if (PUBLIC_PATHS.test(new URL(request.url).pathname)) {
     return context.next()
   }
 
