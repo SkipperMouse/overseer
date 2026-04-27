@@ -1,7 +1,8 @@
 import type { Context } from "@netlify/edge-functions";
 
-// Public paths that bypass auth so the React app can bootstrap and show LoginScreen
-const PUBLIC_PATHS = /^\/(api\/login|index\.html|assets\/[^/]+|icons\/[^/]+\.(png|svg|webp)|apple-touch-icon(-precomposed)?\.png|favicon\.(svg|ico)|manifest\.webmanifest|sw\.js)(\?.*)?$/
+// Public paths that bypass auth so the React app can bootstrap and show LoginScreen.
+// The empty alternative matches "/" so the SPA root always loads.
+const PUBLIC_PATHS = /^\/(|index\.html|api\/login|assets\/[^/?]+|icons\/[^/?]+|apple-touch-icon(-precomposed)?\.png|favicon\.(svg|ico)|manifest\.webmanifest|sw\.js)(\?.*)?$/
 
 export default async function auth(request: Request, context: Context) {
   if (PUBLIC_PATHS.test(new URL(request.url).pathname)) {
