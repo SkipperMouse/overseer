@@ -18,31 +18,21 @@ interface Props {
 export default function TaskRow({
   item, hasDesc, editMode, isDragging, dragProps, onToggle, onDelete, onDescClick,
 }: Props) {
+  const done = item.checked
+
   return (
     <div
-      className={`task-row${item.checked ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
+      className={`task-row${done ? ' done' : ''}${isDragging ? ' dragging' : ''}${editMode ? ' edit-mode' : ''}`}
     >
+      {/* Check tap zone — 48px wide for easy mobile tap */}
       <div
         className="task-check-area"
-        onClick={e => { e.stopPropagation(); onToggle() }}
+        onClick={editMode ? undefined : (e => { e.stopPropagation(); onToggle() })}
       >
-        <input
-          type="checkbox"
-          className="checkbox"
-          checked={item.checked}
-          readOnly
-        />
-      </div>
-
-      {editMode && (
-        <span
-          className="drag-handle"
-          {...dragProps?.attributes}
-          {...dragProps?.listeners}
-        >
-          ⠿
+        <span className={`ascii-checkbox${done ? ' ascii-checkbox-checked' : ''}`}>
+          {done ? '[x]' : '[ ]'}
         </span>
-      )}
+      </div>
 
       {item.icon && (
         <span className="task-icon pip-emoji">{item.icon}</span>
@@ -54,20 +44,33 @@ export default function TaskRow({
         <span className="task-duration">{item.duration}m</span>
       )}
 
-      {item.task_id && hasDesc && (
+      {item.task_id && hasDesc && !editMode && (
         <span
           className="task-desc-indicator"
           onClick={e => { e.stopPropagation(); onDescClick?.() }}
         >¶</span>
       )}
 
-      {onDelete && (
-        <button
-          className="pool-del-btn"
+      {/* Delete button (edit mode) */}
+      {editMode && onDelete && (
+        <div
+          className="task-delete-zone"
           onClick={e => { e.stopPropagation(); onDelete() }}
           onPointerDown={e => e.stopPropagation()}
-          aria-label="удалить задачу"
-        >×</button>
+        >
+          <span className="task-delete-icon">×</span>
+        </div>
+      )}
+
+      {/* Drag handle — rightmost, thumb reach, only in edit mode */}
+      {editMode && (
+        <div
+          className="drag-handle"
+          {...dragProps?.attributes}
+          {...dragProps?.listeners}
+        >
+          <span className="drag-handle-icon">╎╎</span>
+        </div>
       )}
     </div>
   )

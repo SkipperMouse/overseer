@@ -13,7 +13,7 @@ import EmojiPicker from '../tasks/EmojiPicker'
 interface DraftTaskItem {
   id: string
   type: 'task'
-  taskId: string | null  // null = разовая задача
+  taskId: string | null  // null = one-off task
   title: string
   duration?: string
   icon?: string
@@ -88,7 +88,7 @@ function SortableDraftRow({ item, onDelete }: { item: DraftTaskItem; onDelete: (
       }
       <span className="task-title">{item.title}</span>
       {item.duration && <span className="task-duration">{item.duration}m</span>}
-      {item.taskId === null && <span className="nd-onetime-badge">разовая</span>}
+      {item.taskId === null && <span className="nd-onetime-badge">one-off</span>}
       <button className="pool-del-btn" onClick={() => onDelete()}>×</button>
     </div>
   )
@@ -284,11 +284,11 @@ export default function NewDayScreen({ onDone }: Props) {
 
       if (error) {
         if (error.code === '23505') {
-          setSaveError('план на сегодня уже создан с другого устройства — твои данные не сохранены')
+          setSaveError("today's plan already created from another device — your data was not saved")
           return
         }
         console.error(error)
-        setSaveError('ошибка сохранения, попробуй ещё раз')
+        setSaveError('save error, please try again')
         return
       }
       onDone()
@@ -308,7 +308,7 @@ export default function NewDayScreen({ onDone }: Props) {
     return (
       <div className="new-day-screen">
         <div className="nd-loading">
-          <span className="text-muted">загрузка</span>
+          <span className="text-muted">loading</span>
           <span className="blink-cursor" />
         </div>
       </div>
@@ -321,18 +321,18 @@ export default function NewDayScreen({ onDone }: Props) {
       <div className="new-day-screen">
         <div className="nd-exists">
           <span className="label-section">
-            план на {isToday ? 'сегодня' : formatDate(targetDate)} уже создан
+            plan for {isToday ? 'today' : formatDate(targetDate)} already exists
           </span>
           {isToday && (
             <button
               className="pool-tag nd-goto-btn"
               onClick={() => setTargetDate(tomorrowDate())}
             >
-              создать план на завтра
+              create plan for tomorrow
             </button>
           )}
           <button className="pool-tag nd-goto-btn" onClick={onDone}>
-            перейти на сегодня
+            go to today
           </button>
         </div>
       </div>
@@ -344,13 +344,13 @@ export default function NewDayScreen({ onDone }: Props) {
     return (
       <div className="new-day-screen">
         <header className="nd-header">
-          <span className="label-section nd-header-title">новый день{dateLabel}</span>
+          <span className="label-section nd-header-title">new day{dateLabel}</span>
         </header>
         <div className="nd-template-list">
-          <div className="prompt-line nd-pick-prompt">{'>'} выбери шаблон</div>
+          <div className="prompt-line nd-pick-prompt">{'>'} select template</div>
           <button className="nd-tmpl-item nd-tmpl-no-tmpl" onClick={() => selectTemplate(null)}>
-            <span className="nd-tmpl-name">без шаблона</span>
-            <span className="text-muted">// только разделители блоков</span>
+            <span className="nd-tmpl-name">no template</span>
+            <span className="text-muted">// block separators only</span>
           </button>
           {templates.map(tmpl => (
             <button key={tmpl.id} className="nd-tmpl-item" onClick={() => selectTemplate(tmpl.id)}>
@@ -358,7 +358,7 @@ export default function NewDayScreen({ onDone }: Props) {
             </button>
           ))}
           {templates.length === 0 && (
-            <div className="nd-tmpl-none text-muted">// нет сохранённых шаблонов</div>
+            <div className="nd-tmpl-none text-muted">// no saved templates</div>
           )}
         </div>
       </div>
@@ -384,8 +384,8 @@ export default function NewDayScreen({ onDone }: Props) {
           setOnetimeDuration('')
           setOnetimeIcon('')
           setPendingForBlock(null)
-        }}>← назад</button>
-        <span className="label-section nd-header-title">компоновка плана</span>
+        }}>← back</button>
+        <span className="label-section nd-header-title">build plan</span>
       </header>
 
       <div className="nd-build-content">
@@ -410,7 +410,7 @@ export default function NewDayScreen({ onDone }: Props) {
                 </SortableContext>
               </DndContext>
               {blockTasks.length === 0 && (
-                <div className="nd-block-empty text-muted">// пусто</div>
+                <div className="nd-block-empty text-muted">// empty</div>
               )}
             </div>
           )
@@ -436,7 +436,7 @@ export default function NewDayScreen({ onDone }: Props) {
           ))}
 
           {poolTasks.length === 0 && !showOnetimeForm && (
-            <div className="nd-pool-empty text-muted">// все задачи из пула уже в плане</div>
+            <div className="nd-pool-empty text-muted">// all pool tasks already in plan</div>
           )}
 
           {showOnetimeForm ? (
@@ -446,7 +446,7 @@ export default function NewDayScreen({ onDone }: Props) {
                   type="button"
                   className="pool-icon-field"
                   onClick={() => setShowOnetimePicker(v => !v)}
-                  title="выбрать иконку"
+                  title="pick icon"
                 >
                   {onetimeIcon
                     ? <span className="pip-emoji">{onetimeIcon}</span>
@@ -457,7 +457,7 @@ export default function NewDayScreen({ onDone }: Props) {
                   className="pool-input pool-input-title"
                   value={onetimeTitle}
                   onChange={e => setOnetimeTitle(e.target.value)}
-                  placeholder="название задачи"
+                  placeholder="task name"
                   autoFocus
                   onKeyDown={e => {
                     if (e.key === 'Enter') submitOnetimeForm()
@@ -488,7 +488,7 @@ export default function NewDayScreen({ onDone }: Props) {
               className="nd-onetime-btn"
               onClick={() => setShowOnetimeForm(true)}
             >
-              {'// + разовая задача'}
+              {'// + one-off task'}
             </button>
           )}
         </div>
@@ -496,7 +496,7 @@ export default function NewDayScreen({ onDone }: Props) {
         <div className="nd-save-area">
           {saveError && <div className="nd-save-error text-muted">{saveError}</div>}
           <button className="nd-start-btn" disabled={saving} onClick={save}>
-            {saving ? 'сохранение...' : 'начать день'}
+            {saving ? 'saving...' : 'start day'}
           </button>
         </div>
       </div>
@@ -505,7 +505,7 @@ export default function NewDayScreen({ onDone }: Props) {
         <div className="nd-picker-overlay" onClick={() => setPendingForBlock(null)}>
           <div className="nd-picker" onClick={e => e.stopPropagation()}>
             <div className="nd-picker-label prompt-line">
-              {'>'} добавить в блок:
+              {'>'} add to block:
             </div>
             <div className="nd-picker-task-name">
               {pendingForBlock.kind === 'pool'
@@ -523,7 +523,7 @@ export default function NewDayScreen({ onDone }: Props) {
               </button>
             ))}
             <button className="nd-picker-cancel" onClick={() => setPendingForBlock(null)}>
-              отмена
+              cancel
             </button>
           </div>
         </div>

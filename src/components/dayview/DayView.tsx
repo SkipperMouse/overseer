@@ -13,6 +13,9 @@ import SortableTaskRow from '../today/SortableTaskRow'
 import SortableSeparator from '../today/SortableSeparator'
 import EmojiPicker from '../tasks/EmojiPicker'
 import TaskDescriptionScreen from '../tasks/TaskDescriptionScreen'
+import OverseerLogo from '../ui/OverseerLogo'
+import AsciiProgressBar from '../ui/AsciiProgressBar'
+import NoPlanScreen from '../ui/NoPlanScreen'
 
 type PendingAdd =
   | { kind: 'pool'; task: Task }
@@ -110,7 +113,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     return (
       <div className="day-view-screen">
         <div className="today-loading">
-          <span className="text-muted">загрузка</span>
+          <span className="text-muted">loading</span>
           <span className="blink-cursor" />
         </div>
       </div>
@@ -130,22 +133,12 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
   if (!plan) {
     if (isToday && onNewDay) {
-      return (
-        <div className="day-view-screen">
-          <div className="no-plan-screen">
-            <div className="no-plan-date">{formatDate(date)}</div>
-            <div className="no-plan-message label-section">нет плана на сегодня</div>
-            <button className="pool-tag no-plan-btn" onClick={onNewDay}>
-              создать план
-            </button>
-          </div>
-        </div>
-      )
+      return <NoPlanScreen onNewDay={onNewDay} />
     }
     return (
       <div className="day-view-screen">
         <div className="today-loading">
-          <span className="text-muted">// данные не найдены</span>
+          <span className="text-muted">// no data found</span>
         </div>
       </div>
     )
@@ -154,7 +147,6 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
   const tasks = plan.items.filter((i): i is TaskItem => i.type === 'task')
   const done = tasks.filter(i => i.checked).length
   const total = tasks.length
-  const pct = total > 0 ? (done / total) * 100 : 0
 
   const usedTaskIds = new Set(
     tasks
@@ -222,7 +214,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
     <div className="day-view-screen">
       {writeConflict && (
         <div className="day-view-conflict-banner">
-          данные обновлены с другого устройства — план перезагружен
+          data updated from another device — plan reloaded
         </div>
       )}
       {showEmojiPicker && (
@@ -235,11 +227,13 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       <header className="day-view-header">
         <div className="day-view-header-row">
           {onBack ? (
-            <button className="desc-back" onClick={onBack}>← назад</button>
+            <button className="desc-back" onClick={onBack}>← back</button>
           ) : (
-            <span className="today-brand">overseer</span>
+            <OverseerLogo />
           )}
-          <span className="day-view-date text-muted">{formatDate(date)}</span>
+          <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontSize: 10, color: 'var(--text-section)', pointerEvents: 'none' }}>
+            {formatDate(date)}
+          </span>
           {mode === 'view' ? (
             <button className="day-view-action-btn" onClick={() => setMode('edit')}>
               [ edit ]
@@ -251,10 +245,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
           )}
         </div>
         <div className="today-progress-row">
-          <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${pct}%` }} />
-          </div>
-          <span className="today-progress-label text-muted">{done}/{total}</span>
+          <AsciiProgressBar value={done} total={total} />
         </div>
       </header>
 
@@ -321,25 +312,25 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
 
         {tasks.length === 0 && (
           <div className="today-empty">
-            <span className="text-muted">// задачи не добавлены</span>
+            <span className="text-muted">// no tasks added</span>
           </div>
         )}
 
         {mode === 'edit' && (
           <div className="day-view-edit-section">
-            <div className="day-view-edit-label prompt-line">{'>'} добавить задачу</div>
+            <div className="day-view-edit-label prompt-line">{'>'} add task</div>
 
             <button
               className="day-view-pool-toggle"
               onClick={() => { setShowAddPool(v => !v); setShowOnetimeForm(false) }}
             >
-              {showAddPool ? '// скрыть пул' : '// + из пула задач'}
+              {showAddPool ? '// hide pool' : '// + from task pool'}
             </button>
 
             {showAddPool && (
               <div className="day-view-pool-list">
                 {poolAvailable.length === 0 ? (
-                  <div className="text-muted day-view-pool-empty">// все задачи уже в плане</div>
+                  <div className="text-muted day-view-pool-empty">// all tasks already in plan</div>
                 ) : (
                   poolAvailable.map(task => (
                     <button
@@ -364,7 +355,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
               className="day-view-pool-toggle"
               onClick={() => { setShowOnetimeForm(v => !v); setShowAddPool(false) }}
             >
-              {showOnetimeForm ? '// скрыть форму' : '// + разовая задача'}
+              {showOnetimeForm ? '// hide form' : '// + one-off task'}
             </button>
 
             {showOnetimeForm && (
@@ -384,7 +375,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                     className="pool-input pool-input-title"
                     value={onetimeTitle}
                     onChange={e => setOnetimeTitle(e.target.value)}
-                    placeholder="название задачи"
+                    placeholder="task name"
                     autoFocus
                     onKeyDown={e => {
                       if (e.key === 'Enter') submitOnetimeForm()
@@ -418,7 +409,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
       {pendingAdd && (
         <div className="nd-picker-overlay" onClick={() => setPendingAdd(null)}>
           <div className="nd-picker" onClick={e => e.stopPropagation()}>
-            <div className="nd-picker-label prompt-line">{'>'} добавить в блок:</div>
+            <div className="nd-picker-label prompt-line">{'>'} add to block:</div>
             <div className="nd-picker-task-name">
               {pendingAdd.kind === 'pool'
                 ? <>{pendingAdd.task.icon && <span className="pip-emoji">{pendingAdd.task.icon}</span>} {pendingAdd.task.title}</>
@@ -430,7 +421,7 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                 {BLOCK_LABELS[block]}
               </button>
             ))}
-            <button className="nd-picker-cancel" onClick={() => setPendingAdd(null)}>отмена</button>
+            <button className="nd-picker-cancel" onClick={() => setPendingAdd(null)}>cancel</button>
           </div>
         </div>
       )}

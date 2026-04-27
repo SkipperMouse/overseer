@@ -1,9 +1,9 @@
 import type { Block } from '../types'
 
 export const BLOCK_DEFS: { key: Block; label: string }[] = [
-  { key: 'morning', label: '[ утро ]' },
-  { key: 'day',     label: '[ работа ]' },
-  { key: 'evening', label: '[ вечер ]' },
+  { key: 'morning', label: '[ morning ]' },
+  { key: 'day',     label: '[ day ]' },
+  { key: 'evening', label: '[ evening ]' },
 ]
 
 export const BLOCKS: Block[] = BLOCK_DEFS.map(b => b.key)

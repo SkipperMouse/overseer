@@ -3,6 +3,8 @@ import { useHistory } from '../../hooks/useHistory'
 import TodayScreen from '../today/TodayScreen'
 import type { DayPlan, TaskItem } from '../../types'
 import { formatDate } from '../../lib/date'
+import OverseerLogo from '../ui/OverseerLogo'
+import AsciiProgressBar from '../ui/AsciiProgressBar'
 
 function getProgress(plan: DayPlan): { done: number; total: number } {
   const tasks = plan.items.filter((i): i is TaskItem => i.type === 'task')
@@ -22,10 +24,11 @@ export default function HistoryScreen() {
     return (
       <div className="history-screen">
         <header className="history-header">
-          <span className="label-section">[ история ]</span>
+          <OverseerLogo />
+          <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text-section)', pointerEvents: 'none' }}>HIST</span>
         </header>
         <div className="history-loading">
-          <span className="text-muted">загрузка</span>
+          <span className="text-muted">loading</span>
           <span className="blink-cursor" />
         </div>
       </div>
@@ -34,19 +37,19 @@ export default function HistoryScreen() {
 
   return (
     <div className="history-screen">
-      <header className="history-header">
-        <span className="label-section">[ история ]</span>
+      <header className="history-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+        <OverseerLogo />
+        <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text-section)', pointerEvents: 'none' }}>HIST</span>
       </header>
 
       {plans.length === 0 ? (
         <div className="history-empty">
-          <span className="text-muted">// история пуста</span>
+          <span className="text-muted">// history empty</span>
         </div>
       ) : (
         <div className="history-list">
           {plans.map(plan => {
             const { done, total } = getProgress(plan)
-            const pct = total > 0 ? (done / total) * 100 : 0
             const isConfirming = confirmingDelete === plan.id
 
             return (
@@ -58,34 +61,31 @@ export default function HistoryScreen() {
                 <div className="history-item-top">
                   <span className="history-item-date">{formatDate(plan.date)}</span>
                   <div className="history-item-actions" onClick={e => e.stopPropagation()}>
-                    <span className="history-item-count">{done} / {total}</span>
                     {isConfirming ? (
                       <>
                         <button
                           className="pool-del-confirm"
                           onClick={() => { deletePlan(plan.id); setConfirmingDelete(null) }}
                         >
-                          удалить
+                          delete
                         </button>
                         <button
                           className="pool-tag"
                           onClick={() => setConfirmingDelete(null)}
                         >
-                          отмена
+                          cancel
                         </button>
                       </>
                     ) : (
                       <button
                         className="pool-del-btn"
                         onClick={() => setConfirmingDelete(plan.id)}
-                        aria-label="удалить запись"
+                        aria-label="delete record"
                       >×</button>
                     )}
                   </div>
                 </div>
-                <div className="progress-track">
-                  <div className="progress-fill" style={{ width: `${pct}%` }} />
-                </div>
+                <AsciiProgressBar value={done} total={total} />
                 {plan.note && (
                   <div className="history-item-note text-muted">{plan.note}</div>
                 )}
@@ -98,7 +98,7 @@ export default function HistoryScreen() {
               disabled={loadingMore}
               onClick={loadMore}
             >
-              {loadingMore ? 'загрузка...' : '// загрузить ещё'}
+              {loadingMore ? 'loading...' : '// load more'}
             </button>
           )}
         </div>

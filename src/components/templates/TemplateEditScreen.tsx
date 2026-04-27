@@ -25,7 +25,7 @@ function TaskPicker({ tasks, onSelect, onClose }: TaskPickerProps) {
     return (
       <div className="tmpl-picker-overlay" onClick={onClose}>
         <div className="tmpl-picker" onClick={e => e.stopPropagation()}>
-          <div className="tmpl-picker-empty text-muted">// все задачи добавлены</div>
+          <div className="tmpl-picker-empty text-muted">// all tasks added</div>
         </div>
       </div>
     )
@@ -43,7 +43,7 @@ function TaskPicker({ tasks, onSelect, onClose }: TaskPickerProps) {
           <input
             className="tmpl-picker-input"
             autoFocus
-            placeholder="поиск задачи..."
+            placeholder="search task..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Escape' && onClose()}
@@ -51,7 +51,7 @@ function TaskPicker({ tasks, onSelect, onClose }: TaskPickerProps) {
         </div>
         <div className="tmpl-picker-list">
           {filtered.length === 0 && (
-            <div className="tmpl-picker-empty text-muted">// нет совпадений</div>
+            <div className="tmpl-picker-empty text-muted">// no matches</div>
           )}
           {filtered.map(task => (
             <button
@@ -85,7 +85,7 @@ function SepInput({ onConfirm, onCancel }: SepInputProps) {
       <input
         className="pool-input pool-input-title"
         autoFocus
-        placeholder="название разделителя..."
+        placeholder="separator label..."
         value={label}
         onChange={e => setLabel(e.target.value)}
         onKeyDown={e => {
@@ -193,13 +193,13 @@ function BlockSection({
           className="pool-add-btn"
           onClick={() => setPickerOpen(true)}
         >
-          + задача
+          + task
         </button>
         <button
           className="pool-add-btn"
           onClick={() => setSepInputOpen(s => !s)}
         >
-          + разделитель
+          + separator
         </button>
       </div>
 
@@ -275,14 +275,14 @@ export default function TemplateEditScreen({ template, onBack }: Props) {
   return (
     <div className="tmpl-screen">
       <header className="tmpl-header">
-        <button className="desc-back" onClick={onBack}>← назад</button>
+        <button className="desc-back" onClick={onBack}>← back</button>
         <span className="tmpl-edit-title">{template.name}</span>
       </header>
 
       <div className="tmpl-edit-content">
         {loading ? (
           <div className="pool-loading">
-            <span className="text-muted">загрузка</span>
+            <span className="text-muted">loading</span>
             <span className="blink-cursor" />
           </div>
         ) : (
