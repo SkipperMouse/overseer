@@ -25,7 +25,7 @@ export default function TaskDescriptionScreen({ task, onSave, onBack }: Props) {
           key={task.id}
           className="desc-textarea"
           defaultValue={task.description?.content ?? ''}
-          placeholder="// описание задачи..."
+          placeholder="// task description..."
           onBlur={e => onSave(e.target.value)}
           autoFocus
         />

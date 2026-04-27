@@ -63,7 +63,7 @@ export default function EmojiPicker({ onSelect, onClose }: Props) {
                         style={{ opacity: customVal ? 1 : 0.3, pointerEvents: customVal ? 'auto' : 'none' }}
                         onClick={confirm}
                     >
-                        [ ок ]
+                        [ ok ]
                     </button>
                 </div>
             </div>

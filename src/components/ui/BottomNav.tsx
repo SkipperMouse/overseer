@@ -1,14 +1,15 @@
-type Screen = 'today' | 'pool' | 'history'
+type NavScreen = 'today' | 'pool' | 'stat' | 'history'
 
 interface Props {
-  active: Screen
-  onNavigate: (screen: Screen) => void
+  active: NavScreen
+  onNavigate: (screen: NavScreen) => void
 }
 
-const NAV_ITEMS: { id: Screen; label: string }[] = [
-  { id: 'today',   label: 'TODAY' },
-  { id: 'pool',    label: 'POOL'  },
-  { id: 'history', label: 'HIST'  },
+const NAV_ITEMS: { id: NavScreen; label: string }[] = [
+  { id: 'today',   label: 'PLAN' },
+  { id: 'pool',    label: 'POOL' },
+  { id: 'stat',    label: 'STAT' },
+  { id: 'history', label: 'HIST' },
 ]
 
 export default function BottomNav({ active, onNavigate }: Props) {
@@ -17,7 +18,7 @@ export default function BottomNav({ active, onNavigate }: Props) {
       {NAV_ITEMS.map(({ id, label }) => (
         <button
           key={id}
-          className={`nav-item${active === id ? ' active' : ''}`}
+          className={`nav-item${active === id ? ' active phosphor-glow' : ''}`}
           onClick={() => onNavigate(id)}
         >
           {label}

@@ -5,6 +5,7 @@ import type { Task, Template } from '../../types'
 import EmojiPicker from './EmojiPicker'
 import TaskDescriptionScreen from './TaskDescriptionScreen'
 import TemplateEditScreen from '../templates/TemplateEditScreen'
+import OverseerLogo from '../ui/OverseerLogo'
 
 function roundDuration(val: string): string {
   const n = Number(val)
@@ -78,7 +79,7 @@ export default function TaskPoolScreen() {
     return (
       <div className="pool-screen">
         <div className="pool-loading">
-          <span className="text-muted">загрузка</span>
+          <span className="text-muted">loading</span>
           <span className="blink-cursor" />
         </div>
       </div>
@@ -130,6 +131,14 @@ export default function TaskPoolScreen() {
         />
       )}
 
+      {/* Header */}
+      <div style={{ flexShrink: 0, padding: '16px 16px 0', borderBottom: '1px solid var(--border-dim)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, position: 'relative' }}>
+          <OverseerLogo />
+          <span style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', fontSize: 9, letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--text-section)', pointerEvents: 'none' }}>POOL</span>
+        </div>
+      </div>
+
       {/* Global search */}
       <div className="pool-search-row">
         <input
@@ -150,7 +159,7 @@ export default function TaskPoolScreen() {
             <span className="label-section">[ templates ]</span>
           </div>
           {filteredTemplates.length === 0 ? (
-            <div className="pool-empty"><span className="text-muted">// нет совпадений</span></div>
+            <div className="pool-empty"><span className="text-muted">// no matches</span></div>
           ) : filteredTemplates.map(tmpl => (
             <div key={tmpl.id} className="tmpl-item">
               <button className="tmpl-item-name" onClick={() => { setSearchQuery(''); setEditingTemplate(tmpl) }}>
@@ -162,7 +171,7 @@ export default function TaskPoolScreen() {
                   autoFocus
                   onClick={() => { deleteTemplate(tmpl.id); setTmplDelConfirmId(null) }}
                   onBlur={() => setTmplDelConfirmId(null)}
-                >удалить?</button>
+                >delete?</button>
               ) : (
                 <button className="pool-del-btn" onClick={() => setTmplDelConfirmId(tmpl.id)}>×</button>
               )}
@@ -173,7 +182,7 @@ export default function TaskPoolScreen() {
             <span className="label-section">[ task pool ]</span>
           </div>
           {filteredTasks.length === 0 ? (
-            <div className="pool-empty"><span className="text-muted">// нет совпадений</span></div>
+            <div className="pool-empty"><span className="text-muted">// no matches</span></div>
           ) : filteredTasks.map(task => (
             <PoolTaskRow
               key={task.id}
@@ -197,7 +206,7 @@ export default function TaskPoolScreen() {
               className="pool-add-btn"
               onClick={() => { setShowTmplForm(v => !v) }}
             >
-              {showTmplForm ? '× отмена' : '+ шаблон'}
+              {showTmplForm ? '× cancel' : '+ template'}
             </button>
           </div>
 
@@ -207,7 +216,7 @@ export default function TaskPoolScreen() {
                 <input
                   className="pool-input pool-input-title"
                   autoFocus
-                  placeholder="название шаблона..."
+                  placeholder="template name..."
                   value={newTmplName}
                   onChange={e => setNewTmplName(e.target.value)}
                   onKeyDown={e => {
@@ -226,12 +235,12 @@ export default function TaskPoolScreen() {
 
           {templatesLoading ? (
             <div className="pool-loading">
-              <span className="text-muted">загрузка</span>
+              <span className="text-muted">loading</span>
               <span className="blink-cursor" />
             </div>
           ) : templates.length === 0 && !showTmplForm ? (
             <div className="pool-empty">
-              <span className="text-muted">// шаблонов нет</span>
+              <span className="text-muted">// no templates</span>
             </div>
           ) : templates.map(tmpl => (
             <div key={tmpl.id} className="tmpl-item">
@@ -244,7 +253,7 @@ export default function TaskPoolScreen() {
                   autoFocus
                   onClick={() => { deleteTemplate(tmpl.id); setTmplDelConfirmId(null) }}
                   onBlur={() => setTmplDelConfirmId(null)}
-                >удалить?</button>
+                >delete?</button>
               ) : (
                 <button className="pool-del-btn" onClick={() => setTmplDelConfirmId(tmpl.id)}>×</button>
               )}
@@ -258,7 +267,7 @@ export default function TaskPoolScreen() {
               className="pool-add-btn"
               onClick={() => { setShowForm(v => !v); setPickerFor(null) }}
             >
-              {showForm ? '× отмена' : '+ задача'}
+              {showForm ? '× cancel' : '+ task'}
             </button>
           </div>
 
@@ -269,7 +278,7 @@ export default function TaskPoolScreen() {
                   type="button"
                   className="pool-icon-field"
                   onClick={() => setPickerFor(pickerFor === 'new' ? null : 'new')}
-                  title="выбрать иконку"
+                  title="pick icon"
                 >
                   {newIcon ? <span className="pip-emoji">{newIcon}</span> : <span className="text-dim">∅</span>}
                 </button>
@@ -277,7 +286,7 @@ export default function TaskPoolScreen() {
                   className="pool-input pool-input-title"
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
-                  placeholder="название задачи"
+                  placeholder="task name"
                   autoFocus
                 />
                 <input
@@ -299,12 +308,12 @@ export default function TaskPoolScreen() {
 
           {tasksLoading ? (
             <div className="pool-loading">
-              <span className="text-muted">загрузка</span>
+              <span className="text-muted">loading</span>
               <span className="blink-cursor" />
             </div>
           ) : tasks.length === 0 && !showForm ? (
             <div className="pool-empty">
-              <span className="text-muted">// пул пуст</span>
+              <span className="text-muted">// pool empty</span>
             </div>
           ) : null}
 
@@ -353,7 +362,7 @@ function PoolTaskRow({
       <button
         className="pool-item-icon"
         onClick={() => setPickerFor(pickerFor === task.id ? null : task.id)}
-        title="изменить иконку"
+        title="change icon"
       >
         {task.icon ? <span className="pip-emoji">{task.icon}</span> : <span className="text-dim">∅</span>}
       </button>
@@ -375,7 +384,7 @@ function PoolTaskRow({
           }}
         />
       ) : (
-        <span className="pool-item-title" onClick={openTitle} title="редактировать">
+        <span className="pool-item-title" onClick={openTitle} title="edit">
           {task.title}
         </span>
       )}
@@ -400,18 +409,18 @@ function PoolTaskRow({
           }}
         />
       ) : (
-        <span className="pool-item-dur" onClick={openDur} title="редактировать">
+        <span className="pool-item-dur" onClick={openDur} title="edit">
           {task.duration ? task.duration + 'm' : <span className="text-dim">--</span>}
         </span>
       )}
 
       {/* Description indicator */}
       {task.description ? (
-        <button className="pool-desc-btn has-desc" onClick={() => handleOpenDesc(task)} title="открыть описание">
+        <button className="pool-desc-btn has-desc" onClick={() => handleOpenDesc(task)} title="open description">
           ¶
         </button>
       ) : (
-        <button className="pool-desc-btn no-desc" onClick={() => handleAddDesc(task)} title="добавить описание">
+        <button className="pool-desc-btn no-desc" onClick={() => handleAddDesc(task)} title="add description">
           +doc
         </button>
       )}

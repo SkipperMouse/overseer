@@ -1,12 +1,8 @@
 import type { Context } from "@netlify/edge-functions";
 
-// Public paths — resources fetched outside an authenticated Safari session:
-// - /icons/* — iOS Springboard on Add to Home Screen, PWA install
-// - /apple-touch-icon(-precomposed).png — iOS root probe outside the authenticated tab
-// - /favicon.* — tab render before login
-// - /manifest.webmanifest — PWA install flow
-// Everything else (JS/CSS/WOFF2/sw.js) stays behind Basic Auth — anon key is in the JS bundle.
-const PUBLIC_PATHS = /^\/(icons\/[^/]+\.(png|svg|webp)|apple-touch-icon(-precomposed)?\.png|favicon\.(svg|ico)|manifest\.webmanifest)(\?.*)?$/
+// Public paths that bypass auth so the React app can bootstrap and show LoginScreen.
+// The empty alternative matches "/" so the SPA root always loads.
+const PUBLIC_PATHS = /^\/(|index\.html|api\/login|assets\/[^/?]+|icons\/[^/?]+|apple-touch-icon(-precomposed)?\.png|favicon\.(svg|ico)|manifest\.webmanifest|sw\.js)(\?.*)?$/
 
 export default async function auth(request: Request, context: Context) {
   if (PUBLIC_PATHS.test(new URL(request.url).pathname)) {
@@ -20,8 +16,19 @@ export default async function auth(request: Request, context: Context) {
     return context.next();
   }
 
-  const authHeader = request.headers.get("Authorization");
+  // Cookie-based session (set by /api/login)
+  const cookieHeader = request.headers.get("Cookie") ?? "";
+  const sessionCookie = cookieHeader.split(";").map(c => c.trim()).find(c => c.startsWith("overseer_session="))
+  if (sessionCookie) {
+    const value = sessionCookie.slice("overseer_session=".length)
+    const expected = btoa(`${username}:${password}`)
+    if (value === expected) {
+      return context.next()
+    }
+  }
 
+  // HTTP Basic Auth (legacy / backward compat)
+  const authHeader = request.headers.get("Authorization");
   if (authHeader) {
     const expected = "Basic " + btoa(`${username}:${password}`);
     if (authHeader === expected) {
@@ -29,10 +36,6 @@ export default async function auth(request: Request, context: Context) {
     }
   }
 
-  return new Response("Unauthorized", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="OVERSEER"',
-    },
-  });
+  // Redirect to root so React LoginScreen renders instead of browser dialog
+  return Response.redirect(new URL("/", request.url), 302)
 }
