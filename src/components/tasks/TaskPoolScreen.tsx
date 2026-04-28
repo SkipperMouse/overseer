@@ -87,7 +87,7 @@ function ExpandedTemplate({ templateId, allTasks }: { templateId: string; allTas
                 return (
                   <button
                     key={task.id}
-                    onClick={() => { addTaskItem(block, task.id); setPickerBlock(null) }}
+                    onClick={() => { addTaskItem(block, task); setPickerBlock(null) }}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '8px 16px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-dim)', color: 'var(--text-primary)', fontFamily: 'var(--font)', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-primary)' }}
