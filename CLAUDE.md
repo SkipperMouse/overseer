@@ -75,7 +75,7 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 `App.tsx` holds a `Screen` union (`'today' | 'new-day' | 'pool' | 'history' | 'stat' | 'settings'`) and renders one top-level screen at a time. `BottomNav` uses a narrower union `'today' | 'pool' | 'stat' | 'history'` — nav is hidden on `'new-day'` and `'settings'`. Screens manage their own sub-navigation internally via local state:
 
 - **TodayScreen** — accepts optional `date?: string` (defaults to today), `onBack?: () => void`, `onNewDay?: () => void`. Thin wrapper around `<DayView>`.
-- **TaskPoolScreen** — renders `TemplateEditScreen` in place when `editingTemplate !== null`; renders `TaskDescriptionScreen` in place when `descTask !== null`. Contains both the Templates section (top) and Task Pool section (bottom) with global search across both.
+- **TaskPoolScreen** — tab-based: **Tasks** tab (search + inline-edit task list) | **Templates** tab (accordion list). Expanding a template mounts `ExpandedTemplate` which calls `useTemplateItems(templateId)` lazily. Adding a task to a template block opens a bottom-sheet picker (`position: fixed` overlay). `TaskDescriptionScreen` renders in place when `descTask !== null`. No `TemplateEditScreen` — template editing is handled inline within the tab.
 - **HistoryScreen** — renders `TodayScreen` (with `date` + `onBack` props) in place when `viewingDate !== null`.
 - **StatScreen** — placeholder screen with "MODULE OFFLINE" state; has a SETTINGS button → navigates to `'settings'`.
 - **SettingsScreen** — CRT display toggles; `onBack` returns to `'stat'`.
@@ -106,16 +106,19 @@ If `!isAuthenticated()`, renders `<LoginScreen onLogin={() => { setAuthed(true);
 ### CRT effects / AppRoot
 
 `src/components/ui/AppRoot.tsx` wraps the entire app with Pip-Boy terminal visual effects:
-- **Scanlines** — CSS `repeating-linear-gradient` overlay, controlled by `settings.scanlines`
+- **Scanlines** — CSS `repeating-linear-gradient` 2px-pitch overlay, controlled by `settings.scanlines`
 - **Interlace** — green-tinted line overlay, controlled by `settings.interlace`
 - **Bloom** — SVG `feGaussianBlur + feBlend mode=screen` filter, controlled by `settings.bloom`
 - **Phosphor smear** — `filter: blur(0.45px)` on the container, controlled by `settings.smear`
 - **Glass reflection** — diagonal gradient overlay, controlled by `settings.reflection`
 - **Vignette** — always-on `::after` radial-gradient (dark edges)
+- **Rolling bar** — `RollingBar` React component, fires on random 9–28s interval, CSS `@keyframes rolling-bar` defined in `index.html`; controlled by `settings.rollingBar`
 
-All settings persist in localStorage via `useDisplaySettings` hook. **Phosphor glow** is not a CSS class applied directly — `useDisplaySettings` injects/removes a `<style id="phosphor-style">` tag that defines `.phosphor-glow { text-shadow: ... }`. Applied to active nav items and the `OVERSEER` wordmark.
+All settings persist in localStorage via `useDisplaySettings` hook. Three settings inject `<style>` tags dynamically:
+- **Phosphor glow** — `<style id="phosphor-style">` defines `.phosphor-glow { text-shadow: ... }`. Applied to active nav items and the `OVERSEER` wordmark.
+- **Pip-Boy icons** — `<style id="pip-emoji-style">` defines `.pip-emoji { filter: saturate(0) ... }`. When disabled, `.pip-emoji` renders as raw emoji.
 
-`AppContainer` (inline in `App.tsx`) adds bezel corner marks (┌ ┐ └ ┘) and permanent left/right borders.
+`AppContainer` (inline in `App.tsx`) adds bezel corner marks (┌ ┐ └ ┘), permanent left/right borders, and optional **curvature** (`settings.curvature`): `border-radius: 10px` + 4 inset `box-shadow` sides + glass sheen overlay div.
 
 **Boot screen** — pure JS animation in `index.html` runs before React mounts: `#boot` div overlays `#root`, displays sequential terminal lines (RobCo Industries → OVERSEER → checking... → ready █), fades out at 2000ms, removed from DOM at 2420ms.
 
@@ -130,7 +133,7 @@ Each hook owns its slice of state and exposes optimistic-update mutations:
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
 - `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock` (per-block `position` integers, explicit block field)
 - `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
-- `useDisplaySettings` — reads/writes `overseer_display_settings` in localStorage; `toggleSetting(key)` flips one boolean; side-effect injects/removes `<style id="phosphor-style">` on `phosphorGlow` change. Defaults: `{ phosphorGlow: true, bloom: false, smear: false, scanlines: true, interlace: true, reflection: true }`.
+- `useDisplaySettings` — reads/writes `overseer_display_settings` in localStorage; `toggleSetting(key)` flips one boolean; side-effects inject/remove `<style>` tags on `phosphorGlow` and `pipEmoji` changes. Defaults: `{ phosphorGlow: true, pipEmoji: true, bloom: false, smear: false, scanlines: true, interlace: true, reflection: true, curvature: true, rollingBar: true }`.
 
 ### DayView component
 
@@ -146,7 +149,7 @@ When `plan === null` after loading (no `day_plans` row for today), renders `<NoP
 
 Header: `<OverseerLogo />` left, date centered (absolute), edit/done button right. Below header: `<AsciiProgressBar value={checkedCount} total={taskCount} />`.
 
-Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a single shared `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable; `opacity: 0` when `isDragging` (placeholder stays, clone shown via `DragOverlay`).
+Rendering is flat (all `plan.items` in order): separators and tasks interleaved. **Separator types**: block separators have `label === BLOCK_LABELS[sep.block]` (e.g. `'[ morning ]'`) → render as `SectionHeader`; user-added separators (any other label) → render as `MiniSeparator` (`— label`, italic, `var(--text-muted)`). `SortableSeparator` accepts a `mini` prop to select the correct component. `SortableTaskRow` wraps `TaskRow` with `useSortable`; `opacity: 0` when `isDragging` (placeholder stays, clone shown via `DragOverlay`).
 
 ### New Day flow
 
@@ -238,7 +241,7 @@ Key constants (`src/index.css` CSS variables):
 - Scanlines and other CRT effects are managed by `AppRoot` using classes/inline styles driven by `useDisplaySettings` — not hardcoded in CSS
 - All styles in `src/index.css`. No CSS modules, no Tailwind.
 
-Emoji task icons are always rendered with class `pip-emoji` (Pip-Boy filter: `filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4)`). Applied everywhere a task icon is displayed — in plan, pool, templates, picker. Do not apply to nav or system elements.
+Emoji task icons are always rendered with class `pip-emoji`. The Pip-Boy filter (`saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4)`) is dynamically injected by `useDisplaySettings` via `<style id="pip-emoji-style">` — toggled by the PIP-BOY ICONS setting. Apply `.pip-emoji` everywhere a task icon is displayed — in plan, pool, templates, picker. Do not apply to nav or system elements.
 
 `.phosphor-glow` is defined dynamically by `useDisplaySettings` via injected `<style>` — the class itself does nothing until the hook runs. Applied to active nav items and the OVERSEER wordmark.
 
