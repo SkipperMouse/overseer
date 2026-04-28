@@ -18,9 +18,27 @@ function isAuthenticated(): boolean {
   return document.cookie.includes('overseer_ui=1')
 }
 
-function AppContainer({ children }: { children: React.ReactNode }) {
+function AppContainer({ children, curvature }: { children: React.ReactNode; curvature: boolean }) {
   return (
-    <div className="app-container">
+    <div
+      className="app-container"
+      style={{
+        borderRadius: curvature ? 10 : 0,
+        boxShadow: curvature
+          ? 'inset 22px 0 40px rgba(0,0,0,0.60), inset -22px 0 40px rgba(0,0,0,0.60), inset 0 14px 28px rgba(0,0,0,0.38), inset 0 -14px 28px rgba(0,0,0,0.38)'
+          : 'none',
+      }}
+    >
+      {/* Curvature: perimeter glass sheen */}
+      {curvature && (
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 10001,
+          borderRadius: 10,
+          boxShadow: 'inset 0 0 0 1px rgba(106,170,90,0.10)',
+          background: 'radial-gradient(ellipse at 50% 2%, rgba(106,170,90,0.05) 0%, transparent 55%)',
+        }} />
+      )}
+
       {/* Bezel corner marks */}
       {(['0 0 auto auto', 'auto auto 0 0', 'auto 0 0 auto', '0 auto auto 0'] as const).map((inset, i) => (
         <div
@@ -55,7 +73,7 @@ function App() {
   if (!authed) {
     return (
       <AppRoot settings={settings}>
-        <AppContainer>
+        <AppContainer curvature={settings.curvature}>
           <LoginScreen onLogin={() => { setAuthed(true); window.location.reload() }} />
         </AppContainer>
       </AppRoot>
@@ -73,7 +91,7 @@ function App() {
 
   return (
     <AppRoot settings={settings}>
-      <AppContainer>
+      <AppContainer curvature={settings.curvature}>
         {screen === 'today' && <TodayScreen onNewDay={() => setScreen('new-day')} />}
         {screen === 'new-day' && <NewDayScreen onDone={() => setScreen('today')} />}
         {screen === 'pool' && <TaskPoolScreen />}

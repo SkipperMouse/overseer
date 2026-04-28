@@ -1,8 +1,37 @@
+import { useState, useEffect, useRef } from 'react'
 import type { DisplaySettings } from '../../hooks/useDisplaySettings'
 
 interface Props {
   settings: DisplaySettings
   children: React.ReactNode
+}
+
+function RollingBar() {
+  const [pass, setPass] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    function schedule() {
+      const delay = 9000 + Math.random() * 19000
+      timerRef.current = setTimeout(() => {
+        setPass(p => p + 1)
+        schedule()
+      }, delay)
+    }
+    schedule()
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [])
+
+  return (
+    <div key={pass} style={{
+      position: 'fixed', left: 0, right: 0, top: 0,
+      height: 130,
+      background: 'linear-gradient(180deg, transparent 0%, rgba(106,170,90,0.045) 35%, rgba(106,170,90,0.07) 50%, rgba(106,170,90,0.045) 65%, transparent 100%)',
+      pointerEvents: 'none',
+      zIndex: 9993,
+      animation: `rolling-bar ${8 + Math.random() * 2}s linear forwards`,
+    }} />
+  )
 }
 
 export default function AppRoot({ settings, children }: Props) {
@@ -14,7 +43,7 @@ export default function AppRoot({ settings, children }: Props) {
   const scanlinesBg = settings.interlace
     ? 'repeating-linear-gradient(0deg, rgba(0,255,65,0.018) 0px, rgba(0,255,65,0.018) 1px, rgba(0,0,0,0.22) 1px, rgba(0,0,0,0.22) 2px)'
     : settings.scanlines
-    ? 'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.13) 2px, rgba(0,0,0,0.13) 4px)'
+    ? 'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.30) 1px, rgba(0,0,0,0.30) 2px)'
     : undefined
 
   return (
@@ -53,6 +82,8 @@ export default function AppRoot({ settings, children }: Props) {
           ].join(', '),
         }} />
       )}
+
+      {settings.rollingBar && <RollingBar />}
     </div>
   )
 }

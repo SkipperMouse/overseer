@@ -7,6 +7,9 @@ export interface DisplaySettings {
   scanlines: boolean
   interlace: boolean
   reflection: boolean
+  curvature: boolean
+  rollingBar: boolean
+  pipEmoji: boolean
 }
 
 const STORAGE_KEY = 'overseer_display_settings'
@@ -18,6 +21,9 @@ const DEFAULTS: DisplaySettings = {
   scanlines: true,
   interlace: true,
   reflection: true,
+  curvature: true,
+  rollingBar: true,
+  pipEmoji: true,
 }
 
 function load(): DisplaySettings {
@@ -54,6 +60,18 @@ export function useDisplaySettings() {
       ? `.phosphor-glow { text-shadow: 0 0 8px #6aaa5a88, 0 0 3px #6aaa5acc !important; }`
       : ''
   }, [settings.phosphorGlow])
+
+  useEffect(() => {
+    let el = document.getElementById('pip-emoji-style')
+    if (!el) {
+      el = document.createElement('style')
+      el.id = 'pip-emoji-style'
+      document.head.appendChild(el)
+    }
+    el.textContent = settings.pipEmoji
+      ? `.pip-emoji { filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4); }`
+      : ''
+  }, [settings.pipEmoji])
 
   return { settings, toggleSetting }
 }

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Технический долг и задачи аудита** — см. [`TECHDEBT.md`](./TECHDEBT.md). Исправляем по порядку.
+> **Technical debt and audit tasks** — see [`TECHDEBT.md`](./TECHDEBT.md).
 
 ## Git Workflow
 
@@ -72,34 +72,52 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 
 ### Navigation model
 
-`App.tsx` holds a `Screen` union (`today | new-day | pool | history`) and renders one top-level screen at a time. `BottomNav` uses a narrower union that excludes `new-day` (it's hidden on that screen). Screens manage their own sub-navigation internally via local state:
+`App.tsx` holds a `Screen` union (`'today' | 'new-day' | 'pool' | 'history' | 'stat' | 'settings'`) and renders one top-level screen at a time. `BottomNav` uses a narrower union `'today' | 'pool' | 'stat' | 'history'` — nav is hidden on `'new-day'` and `'settings'`. Screens manage their own sub-navigation internally via local state:
 
 - **TodayScreen** — accepts optional `date?: string` (defaults to today), `onBack?: () => void`, `onNewDay?: () => void`. Thin wrapper around `<DayView>`.
 - **TaskPoolScreen** — renders `TemplateEditScreen` in place when `editingTemplate !== null`; renders `TaskDescriptionScreen` in place when `descTask !== null`. Contains both the Templates section (top) and Task Pool section (bottom) with global search across both.
 - **HistoryScreen** — renders `TodayScreen` (with `date` + `onBack` props) in place when `viewingDate !== null`.
+- **StatScreen** — placeholder screen with "MODULE OFFLINE" state; has a SETTINGS button → navigates to `'settings'`.
+- **SettingsScreen** — CRT display toggles; `onBack` returns to `'stat'`.
 
-**Adding a new top-level screen** requires four changes: new hook + component under `src/components/<name>/`, CSS section in `src/index.css`, import + render in `App.tsx`, and adding the id to `NAV_ITEMS` in `BottomNav.tsx` (also update the `Screen` type there).
+**Adding a new top-level screen** requires four changes: new hook + component under `src/components/<name>/`, CSS section in `src/index.css`, import + render in `App.tsx`, and adding the id to `NAV_ITEMS` in `BottomNav.tsx` (also update the `Screen` type).
 
-### DayView component
+**BottomNav** has 4 items: PLAN (`today`) | POOL (`pool`) | STAT (`stat`) | HIST (`history`). The active item receives `phosphor-glow` class in addition to `active`.
 
-`src/components/dayview/DayView.tsx` is the universal day display/edit component used by both TodayScreen and HistoryScreen.
+### Authentication
 
-Props: `{ date: string, onNewDay?: () => void, onBack?: () => void }`
+The app uses cookie-based auth managed by Netlify Edge Functions, replacing the browser Basic Auth dialog.
 
-Two modes:
-- **View mode** — for today: checkbox toggles on click of `task-check-area` (left ~32px of row), description indicator (¶) navigates to `TaskDescriptionScreen`. For historical days: everything readonly. Header has `[ edit ]` button.
-- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within and across blocks. Drag is initiated only from the dedicated `⠿` handle (`.drag-handle` span rendered by `TaskRow` in edit mode) — rest of the row remains tappable: checkbox still toggles, title click opens description. Header has `[ done ]` button.
+**Edge functions** (`netlify/edge-functions/`):
+- `auth.ts` — intercepts all `/*` requests. Checks `overseer_session` cookie (base64 `user:pass`) against `AUTH_USERNAME`/`AUTH_PASSWORD` env vars. Falls back to `Authorization: Basic` header for backward compat. Unauthenticated requests redirect `302 /`. `PUBLIC_PATHS` regex allows `/`, `/index.html`, `/assets/*`, `/api/login`, and static assets to pass without auth so the React SPA always bootstraps.
+- `login.ts` — handles `POST /api/login` with `{username, password}`. On success sets two cookies: `overseer_session` (HttpOnly, 7 days) and `overseer_ui=1` (non-HttpOnly — readable by React).
 
-Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a single shared `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable; `opacity: 0` when `isDragging` (placeholder stays, clone shown via `DragOverlay`).
+**React side** (`App.tsx`):
+```typescript
+function isAuthenticated(): boolean {
+  if (import.meta.env.DEV) return true   // auth bypass in dev
+  return document.cookie.includes('overseer_ui=1')
+}
+```
+If `!isAuthenticated()`, renders `<LoginScreen onLogin={() => { setAuthed(true); window.location.reload() }} />` instead of the app. On successful login the page reloads so the edge function sees the new cookie on all subsequent requests.
 
-### New Day flow
+**Critical invariant** — `PUBLIC_PATHS` in `auth.ts` must include the empty alternation `(|...)` to match bare `/`, otherwise unauthenticated requests to `/` redirect to `/` creating an infinite loop.
 
-`NewDayScreen` (3 steps):
-1. **pick-template** — list templates or "без шаблона"
-2. **build-plan** — three block sections prefilled from template; task pool below (pool tasks + one-off task form); block-picker overlay on task click
-3. **save** — denormalizes title/duration/icon/task_id into JSONB, inserts `day_plans` row, redirects to Today
+### CRT effects / AppRoot
 
-One-off tasks have `task_id: null` in the saved JSONB — they never touch the `tasks` table.
+`src/components/ui/AppRoot.tsx` wraps the entire app with Pip-Boy terminal visual effects:
+- **Scanlines** — CSS `repeating-linear-gradient` overlay, controlled by `settings.scanlines`
+- **Interlace** — green-tinted line overlay, controlled by `settings.interlace`
+- **Bloom** — SVG `feGaussianBlur + feBlend mode=screen` filter, controlled by `settings.bloom`
+- **Phosphor smear** — `filter: blur(0.45px)` on the container, controlled by `settings.smear`
+- **Glass reflection** — diagonal gradient overlay, controlled by `settings.reflection`
+- **Vignette** — always-on `::after` radial-gradient (dark edges)
+
+All settings persist in localStorage via `useDisplaySettings` hook. **Phosphor glow** is not a CSS class applied directly — `useDisplaySettings` injects/removes a `<style id="phosphor-style">` tag that defines `.phosphor-glow { text-shadow: ... }`. Applied to active nav items and the `OVERSEER` wordmark.
+
+`AppContainer` (inline in `App.tsx`) adds bezel corner marks (┌ ┐ └ ┘) and permanent left/right borders.
+
+**Boot screen** — pure JS animation in `index.html` runs before React mounts: `#boot` div overlays `#root`, displays sequential terminal lines (RobCo Industries → OVERSEER → checking... → ready █), fades out at 2000ms, removed from DOM at 2420ms.
 
 ### Hooks
 
@@ -112,14 +130,40 @@ Each hook owns its slice of state and exposes optimistic-update mutations:
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
 - `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock` (per-block `position` integers, explicit block field)
 - `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
+- `useDisplaySettings` — reads/writes `overseer_display_settings` in localStorage; `toggleSetting(key)` flips one boolean; side-effect injects/removes `<style id="phosphor-style">` on `phosphorGlow` change. Defaults: `{ phosphorGlow: true, bloom: false, smear: false, scanlines: true, interlace: true, reflection: true }`.
+
+### DayView component
+
+`src/components/dayview/DayView.tsx` is the universal day display/edit component used by both TodayScreen and HistoryScreen.
+
+Props: `{ date: string, onNewDay?: () => void, onBack?: () => void }`
+
+Two modes:
+- **View mode** — for today: checkbox toggles on click of `task-check-area` (left 48px of row), description indicator (¶) navigates to `TaskDescriptionScreen`. For historical days: everything readonly. Header has `[ edit ]` button.
+- **Edit mode** — add task from pool, add one-off task (both via block-picker overlay), delete tasks, drag-and-drop reorder within and across blocks. Drag is initiated only from the dedicated `╎╎` handle (`.drag-handle` on the **right side** of the row). Rest of the row remains tappable. Header has `[ done ]` button.
+
+When `plan === null` after loading (no `day_plans` row for today), renders `<NoPlanScreen onNewDay={onNewDay} />`.
+
+Header: `<OverseerLogo />` left, date centered (absolute), edit/done button right. Below header: `<AsciiProgressBar value={checkedCount} total={taskCount} />`.
+
+Rendering is block-based (BLOCKS.map): each block renders its separator then its tasks inside a single shared `SortableContext` (edit mode) or plain `TaskRow` list (view mode). `SortableTaskRow` (in `src/components/today/`) wraps `TaskRow` with `useSortable` from @dnd-kit/sortable; `opacity: 0` when `isDragging` (placeholder stays, clone shown via `DragOverlay`).
+
+### New Day flow
+
+`NewDayScreen` (3 steps):
+1. **pick-template** — list templates or "no template"
+2. **build-plan** — three block sections prefilled from template; task pool below (pool tasks + one-off task form); block-picker overlay on task click
+3. **save** — denormalizes title/duration/icon/task_id into JSONB, inserts `day_plans` row, redirects to Today
+
+One-off tasks have `task_id: null` in the saved JSONB — they never touch the `tasks` table.
 
 ### Drag-and-drop
 
 `@dnd-kit/core` + `@dnd-kit/sortable`. All screens use `PointerSensor { distance: 8 }` + `KeyboardSensor`.
 
-iOS scroll-vs-drag is handled by a **dedicated drag handle**, not by sensor delay. `TaskRow` (edit mode) renders `<span className="drag-handle">⠿</span>` which receives `attributes`/`listeners` from `useSortable`. `.drag-handle` has `touch-action: none` (browser can't pan from it). The rest of the row has no drag listeners → native scroll works normally within long lists. Do not move the drag listeners back onto the whole row — it reintroduces the scroll-blocks-on-swipe bug.
+iOS scroll-vs-drag is handled by a **dedicated drag handle**, not by sensor delay. `TaskRow` (edit mode) renders a `.drag-handle` div on the **right** side of the row (symbol `╎╎`, `width: 40px`, `border-left: 1px solid var(--border-dim)`). The div receives `attributes`/`listeners` via the `dragProps` prop passed from `SortableTaskRow`. `.drag-handle` has `touch-action: none`. The rest of the row has no drag listeners → native scroll works normally. Do not move the drag listeners back onto the whole row — it reintroduces the scroll-blocks-on-swipe bug.
 
-TemplateEditScreen still uses whole-row-as-handle (`.tmpl-item-row`). Template lists are short, so the scroll issue is less severe there. If template lists grow, refactor to match the dedicated-handle pattern.
+TemplateEditScreen still uses whole-row-as-handle (`.tmpl-item-row`). Template lists are short, so the scroll issue is less severe there.
 
 Both DayView and TemplateEditScreen wrap everything in a single `DndContext` with one `SortableContext` covering all IDs in block order (`morning → day → evening`). `DragOverlay` renders a visible clone via portal while the original is `opacity: 0` during drag — this prevents visual jumps when the item's DOM node moves between block sections.
 
@@ -144,27 +188,27 @@ Temp IDs use `crypto.randomUUID()` and are replaced once the DB returns the real
 
 This is why Supabase requests are `NetworkOnly` in the SW. **Do not switch to NetworkFirst / StaleWhileRevalidate / CacheFirst for `*.supabase.co`** — even a short cache TTL creates a data-loss window. If offline reads become a real requirement, the fix is write-side (add optimistic-lock column + CAS in `persistItems`, or pull-before-write in each mutation), not read-side caching.
 
-## Деплой и кэширование
+## Deploy and Caching
 
-Проект деплоится на Netlify. Стратегия кэширования:
+Deployed on Netlify. Caching strategy:
 
-- `dist/assets/*` — содержат хэш в имени файла (Rollup `[name]-[hash]`), кэшируются 1 год (`immutable`)
-- `index.html`, `sw.js`, `manifest.webmanifest` — `no-cache, no-store` (всегда свежие)
+- `dist/assets/*` — filenames contain hash (Rollup `[name]-[hash]`), cached 1 year (`immutable`)
+- `index.html`, `sw.js`, `manifest.webmanifest` — `no-cache, no-store` (always fresh)
 - Service Worker: `registerType: 'autoUpdate'`, `skipWaiting: true`, `clientsClaim: true`, `cleanupOutdatedCaches: true`
-- `globPatterns: ['**/*.{js,css,ico,png,svg,webp,woff2}']` — явный список для workbox precache
-- Supabase запросы идут `NetworkOnly` через SW — не кэшируются (см. «Write model warning» выше)
+- `globPatterns: ['**/*.{js,css,ico,png,svg,webp,woff2}']` — explicit list for workbox precache
+- Supabase requests go `NetworkOnly` through SW — not cached (see Write model warning above)
 
-Конфиги: `vite.config.ts` (build output + PWA workbox), `netlify.toml` (Cache-Control заголовки).
+Configs: `vite.config.ts` (build output + PWA workbox), `netlify.toml` (Cache-Control headers + edge function bindings).
 
-## iOS PWA — иконки и мета-теги
+## iOS PWA — icons and meta tags
 
-iOS Safari **полностью игнорирует** `manifest.webmanifest` иконки при добавлении на home screen. Работает только `<link rel="apple-touch-icon">` в `index.html`.
+iOS Safari **completely ignores** `manifest.webmanifest` icons when adding to home screen. Only `<link rel="apple-touch-icon">` in `index.html` works.
 
-Требования:
-- `public/icons/apple-touch-icon.png` — 180×180, **PNG без альфа-канала** (прозрачные области iOS заливает чёрным).
-- Фон иконки непрозрачный, цвет `#060d06` (совпадает с `--bg-base`).
-- При обновлении иконки — поднимать `?v=N` в `index.html`, т.к. Safari кэширует apple-touch-icon крайне упорно.
-- Обязательный набор мета-тегов в `index.html`:
+Requirements:
+- `public/icons/apple-touch-icon.png` — 180×180, **PNG without alpha channel** (iOS fills transparent areas with black).
+- Icon background is opaque, color `#060d06` (matches `--bg-base`).
+- When updating the icon — bump `?v=N` in `index.html`, Safari caches apple-touch-icon aggressively.
+- Required meta tags in `index.html`:
   ```html
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=N">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -172,35 +216,39 @@ iOS Safari **полностью игнорирует** `manifest.webmanifest` и
   <meta name="apple-mobile-web-app-title" content="OVERSEER">
   ```
 
-## Принципы разработки
+## Development Principles
 
-- Один экран / одна фича за раз — не забегать вперёд
-- TypeScript strict — никаких `any`, никаких `as unknown`
-- Оптимистичные апдейты: сначала обновляем локальный state, потом Supabase
-- Дата всегда локальная: `new Date().toLocaleDateString('en-CA')` → `YYYY-MM-DD`
-- Duration хранится как числовая строка (`"30"`, `"0"`), отображается с суффиксом `M` (`"30M"`) — никогда не сохранять `M` в БД. В инпутах `type="number"`, `step="10"`, округление до кратного 10 при blur.
+- One screen / one feature at a time — don't get ahead
+- TypeScript strict — no `any`, no `as unknown`
+- Optimistic updates: update local state first, then Supabase
+- Date is always local: `new Date().toLocaleDateString('en-CA')` → `YYYY-MM-DD`
+- Duration stored as numeric string (`"30"`, `"0"`), displayed with `m` suffix (`"30m"`) — never save `m` to DB. Inputs use `type="number"`, `step="10"`, rounded to nearest 10 on blur.
 
-## Дизайн-система — ОБЯЗАТЕЛЬНО
+## Design System — REQUIRED
 
-Все визуальные решения строго соответствуют стилям в `src/index.css`. Не отклоняться без явного запроса.
+All visual decisions strictly follow styles in `src/index.css`. Do not deviate without explicit request.
 
-Ключевые константы (`src/index.css` CSS-переменные):
-- Фон: `#060d06` (`--bg-base`), поверхности: `#040b04` (`--bg-surface`)
-- Акцент: `#00ff41` (`--accent`), свечение: `0 0 6px #00ff4188` (`--accent-glow`)
-- Шрифт: JetBrains Mono везде
-- Скругления: 0px (максимум 2px для чекбоксов)
-- Бордеры: 1px solid (не 0.5px)
-- Заголовки секций всегда в формате `[ утро ]`, `[ работа ]`, `[ вечер ]`
-- Scanlines через `::before` на `.app-root`
-- Все стили — в `src/index.css`. Нет CSS-модулей, нет Tailwind.
+Key constants (`src/index.css` CSS variables):
+- Background: `#060d06` (`--bg-base`), surfaces: `#040b04` (`--bg-surface`)
+- Accent: `#00ff41` (`--accent`), glow: `0 0 6px #00ff4188` (`--accent-glow`)
+- Font: JetBrains Mono everywhere
+- Border radius: 0px (max 2px for checkboxes)
+- Borders: 1px solid (not 0.5px)
+- Section headers always in format `[ morning ]`, `[ day ]`, `[ evening ]`
+- Scanlines and other CRT effects are managed by `AppRoot` using classes/inline styles driven by `useDisplaySettings` — not hardcoded in CSS
+- All styles in `src/index.css`. No CSS modules, no Tailwind.
 
-Emoji иконки задач всегда рендерятся с классом `pip-emoji` (Pip-Boy фильтр: `filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4)`). Применяется везде где отображается иконка задачи — в плане, пуле, шаблонах, пикере. Не применять к навигации и системным элементам.
+Emoji task icons are always rendered with class `pip-emoji` (Pip-Boy filter: `filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4)`). Applied everywhere a task icon is displayed — in plan, pool, templates, picker. Do not apply to nav or system elements.
 
-Существующие CSS-классы для повторного использования: `.pool-add-btn`, `.pool-del-btn`, `.pool-del-confirm`, `.pool-input`, `.pool-save-btn`, `.pool-section-header`, `.task-icon`, `.task-duration`, `.task-check-area`, `.desc-back`, `.label-section`, `.text-muted`, `.prompt-line`, `.blink-cursor`, `.section-header`, `.pip-emoji`, `.task-desc-indicator`, `.progress-track`, `.progress-fill`, `.history-item`, `.nd-picker-overlay`, `.nd-picker`, `.nd-pool-item`, `.day-view-action-btn`, `.task-row.dragging`, `.tmpl-item-row`.
+`.phosphor-glow` is defined dynamically by `useDisplaySettings` via injected `<style>` — the class itself does nothing until the hook runs. Applied to active nav items and the OVERSEER wordmark.
 
-## TypeScript типы
+Existing CSS classes for reuse: `.pool-add-btn`, `.pool-del-btn`, `.pool-del-confirm`, `.pool-input`, `.pool-save-btn`, `.pool-section-header`, `.task-icon`, `.task-duration`, `.task-check-area`, `.desc-back`, `.label-section`, `.text-muted`, `.prompt-line`, `.blink-cursor`, `.section-header`, `.pip-emoji`, `.task-desc-indicator`, `.history-item`, `.nd-picker-overlay`, `.nd-picker`, `.nd-pool-item`, `.day-view-action-btn`, `.task-row.dragging`, `.tmpl-item-row`, `.ascii-checkbox`, `.ascii-checkbox-checked`, `.ascii-progress`, `.ascii-progress-filled`, `.ascii-progress-empty`, `.ascii-progress-label`, `.drag-handle`, `.drag-handle-icon`, `.task-delete-zone`, `.overseer-logo`, `.overseer-logo-version`, `.phosphor-glow`.
 
-Все типы в `src/types/index.ts`. Ключевые:
+Scrollbar: `scrollbar-width: none` globally, 2px webkit scrollbar hidden by default; `.scrolling` class (added/removed by a JS scroll listener in `index.html`) makes the thumb visible with accent color glow.
+
+## TypeScript Types
+
+All types in `src/types/index.ts`. Key ones:
 
 ```typescript
 export type Block = 'morning' | 'day' | 'evening'
@@ -213,7 +261,8 @@ export interface DayPlan { id, date, items: DayItem[], note?, created_at, update
 export interface Template { id, name, created_at }
 export interface TemplateItem { id, template_id, task_id?, type, separator_label?, block, position, task? }
 ```
-## Комментарии и документация
-- Комментарии в коде — только если решение неочевидное, или есть важные нюансы/подводные камни. Не комментировать очевидные вещи.
-- Язык комментариев и документации — английский. 
-- Если где-то встречается русский текст (включая комментарии в коде) — это ошибка, которую нужно исправить. Исправление включает перевод на английский и удаление русского.
+
+## Comments and Documentation
+- Comments in code only when the solution is non-obvious or there are important caveats. Do not comment obvious things.
+- Language for comments and documentation: English.
+- Russian text anywhere in the codebase (including comments) is an error that must be fixed: translate to English and remove the Russian.

@@ -8,6 +8,7 @@ import type { Task, TaskItem, SeparatorItem, Block } from '../../types'
 import { BLOCKS, BLOCK_LABELS } from '../../lib/blocks'
 import { todayDate, formatDate } from '../../lib/date'
 import SectionHeader from '../today/SectionHeader'
+import MiniSeparator from '../today/MiniSeparator'
 import TaskRow from '../today/TaskRow'
 import SortableTaskRow from '../today/SortableTaskRow'
 import SortableSeparator from '../today/SortableSeparator'
@@ -264,9 +265,12 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
               if (item.type === 'separator') {
                 const sep = item as SeparatorItem
                 const label = sep.label || BLOCK_LABELS[sep.block]
+                const mini = label !== BLOCK_LABELS[sep.block]
                 return mode === 'edit'
-                  ? <SortableSeparator key={sep.id} id={sep.id} label={label} draggable={true} />
-                  : <SectionHeader key={sep.id} label={label} />
+                  ? <SortableSeparator key={sep.id} id={sep.id} label={label} draggable={true} mini={mini} />
+                  : mini
+                    ? <MiniSeparator key={sep.id} label={label} />
+                    : <SectionHeader key={sep.id} label={label} />
               }
               const taskItem = item as TaskItem
               return mode === 'edit'
@@ -302,9 +306,13 @@ export default function DayView({ date, onNewDay, onBack }: Props) {
                     editMode={true}
                     onToggle={() => {}}
                   />
-                ) : (
-                  <SectionHeader label={(draggingItem as SeparatorItem).label || BLOCK_LABELS[(draggingItem as SeparatorItem).block]} />
-                )}
+                ) : (() => {
+                  const sep = draggingItem as SeparatorItem
+                  const label = sep.label || BLOCK_LABELS[sep.block]
+                  return label !== BLOCK_LABELS[sep.block]
+                    ? <MiniSeparator label={label} />
+                    : <SectionHeader label={label} />
+                })()}
               </div>
             )}
           </DragOverlay>

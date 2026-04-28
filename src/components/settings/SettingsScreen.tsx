@@ -8,12 +8,15 @@ interface Props {
 }
 
 const EFFECTS: { key: keyof DisplaySettings; label: string; desc: string }[] = [
-  { key: 'phosphorGlow', label: 'PHOSPHOR GLOW',   desc: 'soft green luminance on active elements' },
-  { key: 'bloom',        label: 'BLOOM / HALATION', desc: 'bright pixels bleed outward like real phosphor' },
-  { key: 'smear',        label: 'PHOSPHOR SMEAR',   desc: 'subtle horizontal blur on all content' },
-  { key: 'scanlines',    label: 'SCANLINES',         desc: 'horizontal dark bands, 2px pitch' },
-  { key: 'interlace',    label: 'INTERLACE LINES',   desc: 'alternating green/dark rows, crt interlace' },
-  { key: 'reflection',   label: 'GLASS REFLECTION',  desc: 'static highlight, upper-left corner' },
+  { key: 'pipEmoji',     label: 'PIP-BOY ICONS',    desc: 'desaturate emoji icons to match phosphor palette' },
+  { key: 'phosphorGlow', label: 'PHOSPHOR GLOW',    desc: 'soft green luminance on active elements' },
+  { key: 'bloom',        label: 'BLOOM / HALATION',  desc: 'bright pixels bleed outward like real phosphor' },
+  { key: 'smear',        label: 'PHOSPHOR SMEAR',    desc: 'subtle horizontal blur on all content' },
+  { key: 'scanlines',    label: 'SCANLINES',          desc: 'horizontal dark bands, 2px pitch' },
+  { key: 'interlace',    label: 'INTERLACE LINES',    desc: 'alternating green/dark rows, crt interlace' },
+  { key: 'reflection',   label: 'GLASS REFLECTION',   desc: 'static highlight, upper-left corner' },
+  { key: 'curvature',    label: 'SCREEN CURVATURE',   desc: 'barrel distortion illusion, inset shadows' },
+  { key: 'rollingBar',   label: 'ROLLING BAR',        desc: 'periodic scan band passes top to bottom' },
 ]
 
 export default function SettingsScreen({ settings, onToggle, onBack }: Props) {
