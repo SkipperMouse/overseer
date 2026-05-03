@@ -4,6 +4,7 @@ import OverseerLogo from '../ui/OverseerLogo'
 interface Props {
   settings: DisplaySettings
   onToggle: (key: keyof DisplaySettings) => void
+  onSet: <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => void
   onBack: () => void
 }
 
@@ -19,7 +20,7 @@ const EFFECTS: { key: keyof DisplaySettings; label: string; desc: string }[] = [
   { key: 'rollingBar',   label: 'ROLLING BAR',        desc: 'periodic scan band passes top to bottom' },
 ]
 
-export default function SettingsScreen({ settings, onToggle, onBack }: Props) {
+export default function SettingsScreen({ settings, onToggle, onSet, onBack }: Props) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{
@@ -62,6 +63,31 @@ export default function SettingsScreen({ settings, onToggle, onBack }: Props) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          borderBottom: '1px solid var(--border-dim)',
+          padding: '14px 16px',
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, letterSpacing: '2px', color: 'var(--text-primary)', marginBottom: 8 }}>
+              BRIGHTNESS
+            </div>
+            <div style={{ fontSize: 9, letterSpacing: '1px', color: 'var(--text-section)', marginBottom: 10, lineHeight: 1.5 }}>
+              overall display brightness
+            </div>
+            <input
+              type="range"
+              min={0.5} max={1.5} step={0.05}
+              value={settings.brightness}
+              onChange={e => onSet('brightness', parseFloat(e.target.value))}
+              style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
+            />
+          </div>
+          <div style={{ flexShrink: 0, fontSize: 10, letterSpacing: '1px', color: 'var(--accent)', minWidth: 36, textAlign: 'right' }}>
+            {Math.round(settings.brightness * 100)}%
+          </div>
+        </div>
+
         {EFFECTS.map(({ key, label, desc }) => {
           const on = settings[key]
           return (

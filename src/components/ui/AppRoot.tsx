@@ -38,13 +38,8 @@ export default function AppRoot({ settings, children }: Props) {
   const contentFilter = [
     settings.bloom && 'url(#crt-bloom)',
     settings.smear && 'blur(0.45px)',
+    settings.brightness !== 1.0 && `brightness(${settings.brightness})`,
   ].filter(Boolean).join(' ') || undefined
-
-  const scanlinesBg = settings.interlace
-    ? 'repeating-linear-gradient(0deg, rgba(0,255,65,0.018) 0px, rgba(0,255,65,0.018) 1px, rgba(0,0,0,0.22) 1px, rgba(0,0,0,0.22) 2px)'
-    : settings.scanlines
-    ? 'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.30) 1px, rgba(0,0,0,0.30) 2px)'
-    : undefined
 
   return (
     <div className="app-root">
@@ -63,8 +58,17 @@ export default function AppRoot({ settings, children }: Props) {
         {children}
       </div>
 
-      {scanlinesBg && (
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9998, background: scanlinesBg }} />
+      {settings.scanlines && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9998,
+          background: 'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.30) 1px, rgba(0,0,0,0.30) 2px)',
+        }} />
+      )}
+      {settings.interlace && (
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999,
+          background: 'repeating-linear-gradient(0deg, rgba(0,255,65,0.018) 0px, rgba(0,255,65,0.018) 1px, rgba(0,0,0,0.22) 1px, rgba(0,0,0,0.22) 2px)',
+        }} />
       )}
 
       {/* Vignette — always on */}

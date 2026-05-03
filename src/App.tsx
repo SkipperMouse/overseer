@@ -67,8 +67,10 @@ function AppContainer({ children, curvature }: { children: React.ReactNode; curv
 
 function App() {
   const [screen, setScreen] = useState<Screen>('today')
-  const { settings, toggleSetting } = useDisplaySettings()
+  const { settings, toggleSetting, setSetting, loaded } = useDisplaySettings()
   const [authed, setAuthed] = useState(isAuthenticated)
+
+  if (!loaded) return null
 
   if (!authed) {
     return (
@@ -101,6 +103,7 @@ function App() {
           <SettingsScreen
             settings={settings}
             onToggle={toggleSetting}
+            onSet={setSetting}
             onBack={() => setScreen('stat')}
           />
         )}
