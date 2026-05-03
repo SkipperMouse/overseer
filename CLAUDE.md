@@ -131,7 +131,7 @@ Each hook owns its slice of state and exposes optimistic-update mutations:
 - `useDayPlan` — thin wrapper: `useDayPlanByDate(todayDate())`; re-exports `canMove` from the same module.
 - `useTasks` — task pool; `createTask`, `updateTask`, `deleteTask`, `createDescription`, `updateDescription`
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
-- `useTemplateItems(templateId)` — items + full task pool for a template; `addTaskItem`, `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock` (per-block `position` integers, explicit block field)
+- `useTemplateItems(templateId)` — items for a template; `addTaskItem(block, task)` (takes full `Task` object — not a task ID), `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock` (per-block `position` integers, explicit block field)
 - `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
 - `useDisplaySettings` — reads/writes `overseer_display_settings` in localStorage; `toggleSetting(key)` flips one boolean; side-effects inject/remove `<style>` tags on `phosphorGlow` and `pipEmoji` changes. Defaults: `{ phosphorGlow: true, pipEmoji: true, bloom: false, smear: false, scanlines: true, interlace: true, reflection: true, curvature: true, rollingBar: true }`.
 
@@ -166,18 +166,15 @@ One-off tasks have `task_id: null` in the saved JSONB — they never touch the `
 
 iOS scroll-vs-drag is handled by a **dedicated drag handle**, not by sensor delay. `TaskRow` (edit mode) renders a `.drag-handle` div on the **right** side of the row (symbol `╎╎`, `width: 40px`, `border-left: 1px solid var(--border-dim)`). The div receives `attributes`/`listeners` via the `dragProps` prop passed from `SortableTaskRow`. `.drag-handle` has `touch-action: none`. The rest of the row has no drag listeners → native scroll works normally. Do not move the drag listeners back onto the whole row — it reintroduces the scroll-blocks-on-swipe bug.
 
-TemplateEditScreen still uses whole-row-as-handle (`.tmpl-item-row`). Template lists are short, so the scroll issue is less severe there.
+DayView wraps everything in a single `DndContext` with one `SortableContext` covering all IDs in order. `DragOverlay` renders a visible clone via portal while the original is `opacity: 0` during drag — prevents visual jumps when the item's DOM node moves between block sections.
 
-Both DayView and TemplateEditScreen wrap everything in a single `DndContext` with one `SortableContext` covering all IDs in block order (`morning → day → evening`). `DragOverlay` renders a visible clone via portal while the original is `opacity: 0` during drag — this prevents visual jumps when the item's DOM node moves between block sections.
-
-**Two different cross-block patterns — do not confuse them:**
-
-- **DayView** (flat JSONB `items` array): no `onDragOver`. `onDragEnd` calls `reorderItems(arrayMove(allIds, oldIdx, newIdx))`; the hook's internal `normalizeItems` re-derives each task's `block` field from its position relative to the nearest separator above. Simpler — works because items + separators live in one ordered array.
-- **TemplateEditScreen** (per-block `position` integer): uses `onDragOver` + `moveCrossBlockLocal` + `dragActiveBlockRef` to update block field and visual order live during drag. `onDragEnd` calls `reorderBlock` for same-block or `moveCrossBlock` for cross-block (fast-drag fallback). Needed because template_items has explicit `block` + `position` columns.
+**DayView cross-block pattern** (flat JSONB `items` array): no `onDragOver`. `onDragEnd` calls `reorderItems(arrayMove(allIds, oldIdx, newIdx))`; the hook's internal `normalizeItems` re-derives each task's `block` field from its position relative to the nearest separator above. Works because items + separators live in one ordered array.
 
 **NewDayScreen** build-plan step uses one `DndContext` per block (`SortableDraftRow` local component) — cross-block drag not supported in draft mode.
 
-In `TemplateEditScreen`, the entire `.tmpl-item-row` is the drag handle. Delete button uses `onPointerDown={e => e.stopPropagation()}` to prevent drag activation. Same pattern applies to checkboxes in DayView edit mode (`.task-row.edit-mode .task-check-area { pointer-events: none }` disables toggle entirely in edit mode).
+`src/components/templates/TemplateEditScreen.tsx` exists but is **not imported anywhere** (dead code). It implemented a per-block `position` DnD pattern with `onDragOver` + `moveCrossBlockLocal` — template editing is now handled inline in `TaskPoolScreen` via `ExpandedTemplate`. The `.tmpl-item-row` whole-row drag handle pattern in that file is not active.
+
+Checkboxes in DayView edit mode: `.task-row.edit-mode .task-check-area { pointer-events: none }` disables toggle entirely in edit mode.
 
 ### Optimistic updates pattern
 
