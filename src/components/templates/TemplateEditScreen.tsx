@@ -14,7 +14,7 @@ interface Props {
 
 interface TaskPickerProps {
   tasks: Task[]
-  onSelect: (taskId: string) => void
+  onSelect: (task: Task) => void
   onClose: () => void
 }
 
@@ -57,7 +57,7 @@ function TaskPicker({ tasks, onSelect, onClose }: TaskPickerProps) {
             <button
               key={task.id}
               className="tmpl-picker-item"
-              onClick={() => { onSelect(task.id); onClose() }}
+              onClick={() => { onSelect(task); onClose() }}
             >
               {task.icon && <span className="task-icon pip-emoji">{task.icon}</span>}
               <span className="tmpl-picker-title">{task.title}</span>
@@ -145,7 +145,7 @@ interface BlockSectionProps {
   label: string
   items: TemplateItem[]
   tasks: Task[]
-  onAddTask: (block: Block, taskId: string) => void
+  onAddTask: (block: Block, task: Task) => void
   onAddSeparator: (block: Block, label: string) => void
   onDelete: (id: string) => void
 }
@@ -206,7 +206,7 @@ function BlockSection({
       {pickerOpen && (
         <TaskPicker
           tasks={availableTasks}
-          onSelect={taskId => onAddTask(blockKey, taskId)}
+          onSelect={task => onAddTask(blockKey, task)}
           onClose={() => setPickerOpen(false)}
         />
       )}
