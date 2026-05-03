@@ -61,6 +61,7 @@ Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE
 | `templates` | Named day presets |
 | `template_items` | Ordered tasks/separators in a template; columns: type, block, position, task_id (nullable), separator_label |
 | `day_plans` | Denormalized daily schedule per date; `items` is JSONB array |
+| `device_settings` | Per-device display settings; PK is `device_id` (UUID stored in localStorage under `overseer_device_id`); `settings` is partial JSONB — absent keys fall back to `DEFAULTS` in the hook |
 
 `day_plans.items` JSONB shape — each element is either:
 - Task: `{id, type:'task', task_id?, title, duration?, icon?, block, time?, checked, position}`
@@ -106,15 +107,16 @@ If `!isAuthenticated()`, renders `<LoginScreen onLogin={() => { setAuthed(true);
 ### CRT effects / AppRoot
 
 `src/components/ui/AppRoot.tsx` wraps the entire app with Pip-Boy terminal visual effects:
-- **Scanlines** — CSS `repeating-linear-gradient` 2px-pitch overlay, controlled by `settings.scanlines`
-- **Interlace** — green-tinted line overlay, controlled by `settings.interlace`
+- **Scanlines** — independent `position:fixed` overlay, z-index 9998, controlled by `settings.scanlines`
+- **Interlace** — independent `position:fixed` overlay, z-index 9999 (above scanlines), green-tinted, controlled by `settings.interlace`. Both can be on simultaneously — they stack.
 - **Bloom** — SVG `feGaussianBlur + feBlend mode=screen` filter, controlled by `settings.bloom`
 - **Phosphor smear** — `filter: blur(0.45px)` on the container, controlled by `settings.smear`
+- **Brightness** — `filter: brightness(N)` on the content wrapper (0.5–1.5, default 1.0), controlled by `settings.brightness`. Applied alongside bloom/smear in `contentFilter`.
 - **Glass reflection** — diagonal gradient overlay, controlled by `settings.reflection`
-- **Vignette** — always-on `::after` radial-gradient (dark edges)
+- **Vignette** — always-on radial-gradient (dark edges), z-index 9997
 - **Rolling bar** — `RollingBar` React component, fires on random 9–28s interval, CSS `@keyframes rolling-bar` defined in `index.html`; controlled by `settings.rollingBar`
 
-All settings persist in localStorage via `useDisplaySettings` hook. Three settings inject `<style>` tags dynamically:
+All settings persist in localStorage and Supabase `device_settings` via `useDisplaySettings` hook. Two settings inject `<style>` tags dynamically:
 - **Phosphor glow** — `<style id="phosphor-style">` defines `.phosphor-glow { text-shadow: ... }`. Applied to active nav items and the `OVERSEER` wordmark.
 - **Pip-Boy icons** — `<style id="pip-emoji-style">` defines `.pip-emoji { filter: saturate(0) ... }`. When disabled, `.pip-emoji` renders as raw emoji.
 
@@ -133,7 +135,7 @@ Each hook owns its slice of state and exposes optimistic-update mutations:
 - `useTemplates` — template list; `createTemplate`, `deleteTemplate`
 - `useTemplateItems(templateId)` — items for a template; `addTaskItem(block, task)` (takes full `Task` object — not a task ID), `addSeparator`, `deleteItem`, `reorderBlock`, `moveCrossBlockLocal`, `moveCrossBlock` (per-block `position` integers, explicit block field)
 - `useHistory` — last 30 `day_plans` rows ordered by `date desc`; `deletePlan` with optimistic removal
-- `useDisplaySettings` — reads/writes `overseer_display_settings` in localStorage; `toggleSetting(key)` flips one boolean; side-effects inject/remove `<style>` tags on `phosphorGlow` and `pipEmoji` changes. Defaults: `{ phosphorGlow: true, pipEmoji: true, bloom: false, smear: false, scanlines: true, interlace: true, reflection: true, curvature: true, rollingBar: true }`.
+- `useDisplaySettings` — syncs display settings between localStorage (`overseer_display_settings`) and Supabase `device_settings` table. On mount fetches DB row for current `device_id`; 2500ms timeout fallback to localStorage defaults. Returns `{ settings, toggleSetting, setSetting, loaded }`. `toggleSetting(key)` flips a boolean; `setSetting(key, value)` sets any value (used for numeric `brightness`). Both persist to localStorage and upsert to DB. If DB row is missing keys (new settings added to code), upserts the full merged object immediately. `App` returns `null` while `loaded === false` — boot screen covers this window. Defaults: `{ phosphorGlow: true, pipEmoji: true, bloom: false, smear: false, scanlines: true, interlace: true, reflection: true, curvature: true, rollingBar: true, brightness: 1.0 }`. **Adding a new setting**: add to `DisplaySettings` interface and `DEFAULTS` only — no DB migration needed.
 
 ### DayView component
 
