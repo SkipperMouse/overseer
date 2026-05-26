@@ -36,6 +36,10 @@ html, body, #root {
   height: 100%;
 }
 
+html {
+  touch-action: manipulation;
+}
+
 body {
   background: var(--bg-base);
   color: var(--text-primary);
@@ -43,6 +47,7 @@ body {
   font-size: 13px;
   letter-spacing: 0.3px;
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
 
 /* ─── Phosphor glow class (toggled via injected <style> in useDisplaySettings) ── */
