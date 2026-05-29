@@ -1,7 +1,44 @@
-<svg width="500" height="500" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-    <path d="M 495.0,250.0 L 418.6,319.8 423.2,423.2 319.8,418.6 250.0,495.0 180.2,418.6 76.8,423.2 81.4,319.8 5.0,250.0 81.4,180.2 76.8,76.8 180.2,81.4 250.0,5.0 319.8,81.4 423.2,76.8 418.6,180.2 495.0,250.0 Z" fill="#171717" stroke="#333" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" fill="#030803"></rect>
 
-    <circle cx="250" cy="250" r="100" fill="#212121" />
-    <circle cx="250" cy="250" r="70" fill="#383838" />
-    <circle cx="250" cy="250" r="50" fill="hsl(45, 60%, 42.5%)" />
+  
+  <path d="&#xA;    M16,3.2&#xA;    L17.3,5.1 L19.4,4.6 L19.8,6.8 L22,7.0 L21.8,9.2&#xA;    L23.8,10.2 L22.9,12.2 L24.5,13.8 L23.0,15.5&#xA;    L24.5,17.2 L22.9,18.8 L23.8,20.8 L21.8,21.8&#xA;    L22.0,24.0 L19.8,24.2 L19.4,26.4 L17.3,25.9&#xA;    L16,27.8 L14.7,25.9 L12.6,26.4 L12.2,24.2&#xA;    L10.0,24.0 L10.2,21.8 L8.2,20.8 L9.1,18.8&#xA;    L7.5,17.2 L9.0,15.5 L7.5,13.8 L9.1,12.2&#xA;    L8.2,10.2 L10.2,9.2 L10.0,7.0 L12.2,6.8&#xA;    L12.6,4.6 L14.7,5.1 Z&#xA;  " fill="#060d06" stroke="#6aaa5a" stroke-width="0.8" style="filter: drop-shadow(0 0 2px #00ff4188)"></path>
+
+  
+  <circle cx="16" cy="16" r="10.5" fill="none" stroke="#1a2e1a" stroke-width="0.6"></circle>
+
+  
+  <g stroke="#6aaa5a" stroke-width="1.4" stroke-linecap="round" style="filter: drop-shadow(0 0 1.5px #00ff4166)">
+    <line x1="16" y1="9.5" x2="16" y2="13"></line>
+    <line x1="16" y1="19" x2="16" y2="22.5"></line>
+    <line x1="9.5" y1="16" x2="13" y2="16"></line>
+    <line x1="19" y1="16" x2="22.5" y2="16"></line>
+    <line x1="11.5" y1="11.5" x2="13.8" y2="13.8"></line>
+    <line x1="18.2" y1="18.2" x2="20.5" y2="20.5"></line>
+    <line x1="20.5" y1="11.5" x2="18.2" y2="13.8"></line>
+    <line x1="13.8" y1="18.2" x2="11.5" y2="20.5"></line>
+  </g>
+
+  
+  <g fill="#6aaa5a" style="filter: drop-shadow(0 0 1px #00ff4188)">
+    <circle cx="16" cy="9.5" r="1.1"></circle>
+    <circle cx="16" cy="22.5" r="1.1"></circle>
+    <circle cx="9.5" cy="16" r="1.1"></circle>
+    <circle cx="22.5" cy="16" r="1.1"></circle>
+    <circle cx="11.5" cy="11.5" r="1.1"></circle>
+    <circle cx="20.5" cy="20.5" r="1.1"></circle>
+    <circle cx="20.5" cy="11.5" r="1.1"></circle>
+    <circle cx="11.5" cy="20.5" r="1.1"></circle>
+  </g>
+
+  
+  <circle cx="16" cy="16" r="3.8" fill="#030803" stroke="#00ff41" stroke-width="0.9" style="filter: drop-shadow(0 0 3px #00ff4199)"></circle>
+
+  
+  <circle cx="16" cy="16" r="1.4" fill="#00ff41" style="filter: drop-shadow(0 0 4px #00ff41)"></circle>
+
+  
+  <circle cx="5.8" cy="12.5" r="0.9" fill="#0a1a0a" stroke="#1a2e1a" stroke-width="0.4"></circle>
+  <circle cx="5.8" cy="16" r="0.9" fill="#0a1a0a" stroke="#1a2e1a" stroke-width="0.4"></circle>
+  <circle cx="5.8" cy="19.5" r="0.9" fill="#0a1a0a" stroke="#1a2e1a" stroke-width="0.4"></circle>
 </svg>

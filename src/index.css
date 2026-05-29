@@ -36,6 +36,10 @@ html, body, #root {
   height: 100%;
 }
 
+html {
+  touch-action: manipulation;
+}
+
 body {
   background: var(--bg-base);
   color: var(--text-primary);
@@ -43,6 +47,7 @@ body {
   font-size: 13px;
   letter-spacing: 0.3px;
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
 
 /* ─── Phosphor glow class (toggled via injected <style> in useDisplaySettings) ── */
@@ -424,6 +429,23 @@ body {
   cursor: grabbing;
 }
 
+/* ─── User-added inline separator (— label) ─────────────────── */
+.mini-separator {
+  padding: 6px 16px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.mini-separator-drag {
+  cursor: grab;
+  user-select: none;
+}
+.mini-separator-drag:active {
+  cursor: grabbing;
+}
+
 /* ─── Task row layout ────────────────────────────────────────── */
 .task-row {
   display: flex;
@@ -447,9 +469,9 @@ body {
 }
 
 .task-icon {
-  font-size: 13px;
+  font-size: 15px;
   flex-shrink: 0;
-  width: 18px;
+  width: 22px;
   text-align: center;
 }
 
@@ -1219,8 +1241,8 @@ body {
 }
 
 /* ─── Pip-Boy emoji filter ──────────────────────────────────────── */
+/* Filter definition injected dynamically by useDisplaySettings when pipEmoji is on */
 .pip-emoji {
-  /*filter: saturate(0) brightness(0.6) sepia(1) hue-rotate(55deg) saturate(4);*/
   display: inline-block;
 }
 

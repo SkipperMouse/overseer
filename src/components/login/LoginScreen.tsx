@@ -148,8 +148,10 @@ export default function LoginScreen({ onLogin }: Props) {
               textTransform: 'uppercase', padding: '9px 32px',
               cursor: loading ? 'default' : 'pointer', borderRadius: 0,
               textShadow: loading ? 'none' : '0 0 6px #00ff4155',
-              transition: 'border-color 0.15s, color 0.15s',
+              transition: 'border-color 0.15s, color 0.15s, background 0.15s',
             }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#00ff4108' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           >
             {loading ? (
               <span style={{ letterSpacing: '2px', color: 'var(--text-section)' }}>

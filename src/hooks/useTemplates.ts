@@ -119,10 +119,8 @@ export function useTemplateItems(templateId: string) {
     })
   }, [templateId])
 
-  const addTaskItem = useCallback(async (block: Block, taskId: string) => {
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
-
+  const addTaskItem = useCallback(async (block: Block, task: Task) => {
+    const taskId = task.id
     const blockItems = items.filter(i => i.block === block)
     const position = blockItems.length > 0
       ? Math.max(...blockItems.map(i => i.position)) + 1
@@ -153,7 +151,7 @@ export function useTemplateItems(templateId: string) {
     }
     const row = data as RawTemplateItemRow
     setItems(prev => prev.map(i => i.id === tempId ? { ...optimistic, id: row.id } : i))
-  }, [items, tasks, templateId])
+  }, [items, templateId])
 
   const addSeparator = useCallback(async (block: Block, label: string) => {
     const blockItems = items.filter(i => i.block === block)

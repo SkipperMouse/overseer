@@ -75,3 +75,15 @@ drop trigger if exists task_descriptions_updated_at on overseer.task_description
 create trigger task_descriptions_updated_at
   before update on overseer.task_descriptions
   for each row execute function overseer.update_updated_at();
+
+-- ─── device_settings — per-device display preferences ───────────
+create table if not exists overseer.device_settings (
+  device_id  text primary key,
+  settings   jsonb not null default '{}',
+  updated_at timestamptz default now()
+);
+
+drop trigger if exists device_settings_updated_at on overseer.device_settings;
+create trigger device_settings_updated_at
+  before update on overseer.device_settings
+  for each row execute function overseer.update_updated_at();
